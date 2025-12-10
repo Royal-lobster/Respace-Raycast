@@ -45,13 +45,19 @@ async function launchItem(item: WorkspaceItem): Promise<void> {
       case "terminal": {
         // Execute terminal command in a new Terminal window
         // Using AppleScript to open a new terminal window and run the command
+        // Properly escape the command for AppleScript
+        const escapedCommand = item.path
+          .replace(/\\/g, "\\\\") // Escape backslashes first
+          .replace(/"/g, '\\"'); // Then escape double quotes
         const script = `
           tell application "Terminal"
             activate
-            do script "${item.path.replace(/"/g, '\\"')}"
+            do script "${escapedCommand}"
           end tell
         `;
-        await execAsync(`osascript -e '${script.replace(/'/g, "'\\''")}'`);
+        // Escape single quotes for the shell command
+        const escapedScript = script.replace(/'/g, "'\\''");
+        await execAsync(`osascript -e '${escapedScript}'`);
         break;
       }
 
@@ -59,19 +65,14 @@ async function launchItem(item: WorkspaceItem): Promise<void> {
         throw new Error(`Unknown item type: ${item.type}`);
     }
   } catch (error) {
-    throw new Error(
-      `Failed to launch ${item.name}: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new Error(`Failed to launch ${item.name}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 /**
  * Launches all items in a workspace with delays
  */
-export async function launchWorkspace(
-  items: WorkspaceItem[],
-  workspaceName: string,
-): Promise<void> {
+export async function launchWorkspace(items: WorkspaceItem[], workspaceName: string): Promise<void> {
   if (items.length === 0) {
     await showHUD("❌ Workspace is empty");
     return;
@@ -118,8 +119,6 @@ export async function launchWorkspace(
     toast.message = `${successCount}/${items.length} items opened, ${errors.length} failed`;
 
     // Show first error in HUD
-    await showHUD(
-      `⚠️ ${successCount}/${items.length} items opened. ${errors[0]}`,
-    );
+    await showHUD(`⚠️ ${successCount}/${items.length} items opened. ${errors[0]}`);
   }
 }

@@ -66,14 +66,12 @@ export function getWorkspaceById(id: string): Workspace | undefined {
 /**
  * Creates a new workspace
  */
-export function createWorkspace(
-  workspace: Omit<Workspace, "id" | "createdAt" | "updatedAt">,
-): Workspace {
+export function createWorkspace(workspace: Omit<Workspace, "id" | "createdAt" | "updatedAt">): Workspace {
   const data = readWorkspaces();
   const now = new Date().toISOString();
   const newWorkspace: Workspace = {
     ...workspace,
-    id: `workspace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: `workspace-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
     createdAt: now,
     updatedAt: now,
   };
@@ -87,10 +85,7 @@ export function createWorkspace(
 /**
  * Updates an existing workspace
  */
-export function updateWorkspace(
-  id: string,
-  updates: Partial<Omit<Workspace, "id" | "createdAt">>,
-): Workspace | null {
+export function updateWorkspace(id: string, updates: Partial<Omit<Workspace, "id" | "createdAt">>): Workspace | null {
   const data = readWorkspaces();
   const index = data.workspaces.findIndex((w) => w.id === id);
 

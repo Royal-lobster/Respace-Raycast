@@ -50,17 +50,12 @@ export default function OpenWorkspace() {
             ]}
             actions={
               <ActionPanel>
-                <Action
-                  title="Open Workspace"
-                  icon={Icon.Rocket}
-                  onAction={() => handleLaunch(workspace)}
-                />
-                <Action.ShowInFinder
-                  title="Show Items"
-                  path={
-                    workspace.items.length > 0 ? workspace.items[0].path : ""
-                  }
-                />
+                <Action title="Open Workspace" icon={Icon.Rocket} onAction={() => handleLaunch(workspace)} />
+                {(() => {
+                  // Find first file or folder item to show in Finder
+                  const fileItem = workspace.items.find((item) => item.type === "file" || item.type === "folder");
+                  return fileItem ? <Action.ShowInFinder title="Show in Finder" path={fileItem.path} /> : null;
+                })()}
                 <Action.CopyToClipboard
                   title="Copy Workspace Info"
                   content={JSON.stringify(workspace, null, 2)}

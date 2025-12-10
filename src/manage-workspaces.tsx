@@ -11,17 +11,8 @@ import {
   useNavigation,
 } from "@raycast/api";
 import { useEffect, useState } from "react";
-import type {
-  Workspace,
-  WorkspaceItem,
-  WorkspaceItemType,
-} from "./types/workspace";
-import {
-  createWorkspace,
-  deleteWorkspace,
-  getAllWorkspaces,
-  updateWorkspace,
-} from "./utils/storage";
+import type { Workspace, WorkspaceItem, WorkspaceItemType } from "./types/workspace";
+import { createWorkspace, deleteWorkspace, getAllWorkspaces, updateWorkspace } from "./utils/storage";
 
 export default function ManageWorkspaces() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -82,9 +73,7 @@ export default function ManageWorkspaces() {
             <Action.Push
               title="Create Workspace"
               icon={Icon.Plus}
-              target={
-                <CreateWorkspaceForm onWorkspaceCreated={loadWorkspaces} />
-              }
+              target={<CreateWorkspaceForm onWorkspaceCreated={loadWorkspaces} />}
             />
           </ActionPanel>
         }
@@ -107,19 +96,12 @@ export default function ManageWorkspaces() {
                 <Action.Push
                   title="Edit Workspace"
                   icon={Icon.Pencil}
-                  target={
-                    <EditWorkspaceForm
-                      workspace={workspace}
-                      onWorkspaceUpdated={loadWorkspaces}
-                    />
-                  }
+                  target={<EditWorkspaceForm workspace={workspace} onWorkspaceUpdated={loadWorkspaces} />}
                 />
                 <Action.Push
                   title="Create New Workspace"
                   icon={Icon.Plus}
-                  target={
-                    <CreateWorkspaceForm onWorkspaceCreated={loadWorkspaces} />
-                  }
+                  target={<CreateWorkspaceForm onWorkspaceCreated={loadWorkspaces} />}
                   shortcut={{ modifiers: ["cmd"], key: "n" }}
                 />
               </ActionPanel.Section>
@@ -192,11 +174,7 @@ function CreateWorkspaceForm({ onWorkspaceCreated }: CreateWorkspaceFormProps) {
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm
-            title="Create Workspace"
-            icon={Icon.Check}
-            onSubmit={handleSubmit}
-          />
+          <Action.SubmitForm title="Create Workspace" icon={Icon.Check} onSubmit={handleSubmit} />
           <Action.Push
             title="Add Item"
             icon={Icon.Plus}
@@ -212,13 +190,7 @@ function CreateWorkspaceForm({ onWorkspaceCreated }: CreateWorkspaceFormProps) {
         </ActionPanel>
       }
     >
-      <Form.TextField
-        id="name"
-        title="Name"
-        placeholder="My Workspace"
-        value={name}
-        onChange={setName}
-      />
+      <Form.TextField id="name" title="Name" placeholder="My Workspace" value={name} onChange={setName} />
       <Form.TextArea
         id="description"
         title="Description"
@@ -229,11 +201,7 @@ function CreateWorkspaceForm({ onWorkspaceCreated }: CreateWorkspaceFormProps) {
       <Form.Separator />
       <Form.Description
         title="Items"
-        text={
-          items.length === 0
-            ? "No items added yet"
-            : `${items.length} item(s) added`
-        }
+        text={items.length === 0 ? "No items added yet" : `${items.length} item(s) added`}
       />
       {items.map((item, index) => (
         <Form.Description
@@ -251,10 +219,7 @@ interface EditWorkspaceFormProps {
   onWorkspaceUpdated: () => void;
 }
 
-function EditWorkspaceForm({
-  workspace,
-  onWorkspaceUpdated,
-}: EditWorkspaceFormProps) {
+function EditWorkspaceForm({ workspace, onWorkspaceUpdated }: EditWorkspaceFormProps) {
   const { pop } = useNavigation();
   const [name, setName] = useState(workspace.name);
   const [description, setDescription] = useState(workspace.description || "");
@@ -297,11 +262,7 @@ function EditWorkspaceForm({
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm
-            title="Save Changes"
-            icon={Icon.Check}
-            onSubmit={handleSubmit}
-          />
+          <Action.SubmitForm title="Save Changes" icon={Icon.Check} onSubmit={handleSubmit} />
           <Action.Push
             title="Add Item"
             icon={Icon.Plus}
@@ -321,13 +282,7 @@ function EditWorkspaceForm({
         </ActionPanel>
       }
     >
-      <Form.TextField
-        id="name"
-        title="Name"
-        placeholder="My Workspace"
-        value={name}
-        onChange={setName}
-      />
+      <Form.TextField id="name" title="Name" placeholder="My Workspace" value={name} onChange={setName} />
       <Form.TextArea
         id="description"
         title="Description"
@@ -336,12 +291,7 @@ function EditWorkspaceForm({
         onChange={setDescription}
       />
       <Form.Separator />
-      <Form.Description
-        title="Items"
-        text={
-          items.length === 0 ? "No items added yet" : `${items.length} item(s)`
-        }
-      />
+      <Form.Description title="Items" text={items.length === 0 ? "No items added yet" : `${items.length} item(s)`} />
       {items.map((item, index) => (
         <Form.Description
           key={item.id}
@@ -425,41 +375,18 @@ function AddItemForm({ onItemAdded }: AddItemFormProps) {
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm
-            title="Add Item"
-            icon={Icon.Check}
-            onSubmit={handleSubmit}
-          />
+          <Action.SubmitForm title="Add Item" icon={Icon.Check} onSubmit={handleSubmit} />
         </ActionPanel>
       }
     >
-      <Form.Dropdown
-        id="type"
-        title="Type"
-        value={type}
-        onChange={(value) => setType(value as WorkspaceItemType)}
-      >
-        <Form.Dropdown.Item
-          value="app"
-          title="Application"
-          icon={Icon.AppWindow}
-        />
+      <Form.Dropdown id="type" title="Type" value={type} onChange={(value) => setType(value as WorkspaceItemType)}>
+        <Form.Dropdown.Item value="app" title="Application" icon={Icon.AppWindow} />
         <Form.Dropdown.Item value="folder" title="Folder" icon={Icon.Folder} />
         <Form.Dropdown.Item value="file" title="File" icon={Icon.Document} />
         <Form.Dropdown.Item value="url" title="URL" icon={Icon.Globe} />
-        <Form.Dropdown.Item
-          value="terminal"
-          title="Terminal Command"
-          icon={Icon.Terminal}
-        />
+        <Form.Dropdown.Item value="terminal" title="Terminal Command" icon={Icon.Terminal} />
       </Form.Dropdown>
-      <Form.TextField
-        id="name"
-        title="Name"
-        placeholder="Item name"
-        value={name}
-        onChange={setName}
-      />
+      <Form.TextField id="name" title="Name" placeholder="Item name" value={name} onChange={setName} />
       <Form.TextField
         id="path"
         title={getPathLabel()}
