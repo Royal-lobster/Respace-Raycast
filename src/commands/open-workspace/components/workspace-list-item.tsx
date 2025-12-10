@@ -1,6 +1,6 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api";
-import type { Workspace } from "../types/workspace";
-import { getWorkspaceDeeplink } from "../utils/deeplink";
+import { getWorkspaceDeeplink } from "../../../core/deeplink/deeplink";
+import type { Workspace } from "../../../types/workspace";
 
 interface WorkspaceListItemProps {
   workspace: Workspace;

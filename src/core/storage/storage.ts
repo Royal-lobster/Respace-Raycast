@@ -1,11 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import type { Workspace, WorkspacesData } from "../types/workspace";
-
-const CONFIG_DIR = join(homedir(), ".config", "respace-raycast");
-const DATA_FILE = join(CONFIG_DIR, "workspaces.json");
+import type { Workspace, WorkspacesData } from "../../types/workspace";
+import { CONFIG_DIR, DATA_FILE } from "./constants";
 
 /**
  * Ensures the config directory exists
