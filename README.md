@@ -6,18 +6,26 @@ A powerful Raycast extension to open apps, files, folders, URLs, and terminal co
 
 - 📦 **Workspace Bundles**: Group apps, folders, files, URLs, and terminal commands together
 - 🚀 **One-Click Launch**: Open entire workspaces instantly
+- ⚡ **Quick Open**: CLI-style launcher for instant access to workspace items
 - ⏱️ **Launch Delays**: Configure delays between opening items
 - 🔍 **Quick Search**: Find workspaces quickly with Raycast's search
 - ✏️ **Full CRUD**: Create, edit, and delete workspaces easily
 - 💾 **Local Storage**: Data stored in `~/.config/respace-raycast/`
 - 🎨 **Beautiful UI**: Native Raycast UI with icons and error handling
+- 🔗 **Deeplinks**: Share direct links to your workspaces
 
 ## Commands
 
 ### Open Workspace
+
 List and launch your workspaces. Simply search for a workspace and press Enter to open all its items.
 
+### Quick Open
+
+CLI-style quick launcher for instant access to any item across all your workspaces. Type to search and press Enter to open individual items without launching the entire workspace.
+
 ### Manage Workspaces
+
 Create, edit, and delete workspaces with a full management interface.
 
 ## Installation
@@ -50,9 +58,16 @@ Create, edit, and delete workspaces with a full management interface.
 2. Search for your workspace
 3. Press Enter to launch all items
 
+### Quick Opening Individual Items
+
+1. Open "Quick Open" command
+2. Type to search across all workspace items
+3. Press Enter to open just that item (without launching the entire workspace)
+
 ## Example Workspace
 
 **Web Development Environment**
+
 - VS Code (app)
 - Chrome (app)
 - GitHub (URL) - 1s delay
