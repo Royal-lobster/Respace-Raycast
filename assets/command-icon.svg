@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#5B21B6"/>
+  
+  <!-- Grid representing workspace -->
+  <rect x="140" y="140" width="90" height="90" rx="8" fill="white" opacity="0.9"/>
+  <rect x="250" y="140" width="90" height="90" rx="8" fill="white" opacity="0.9"/>
+  <rect x="140" y="250" width="90" height="90" rx="8" fill="white" opacity="0.9"/>
+  <rect x="250" y="250" width="90" height="90" rx="8" fill="white" opacity="0.9"/>
+  
+  <!-- Accent circle -->
+  <circle cx="360" cy="152" r="40" fill="#FCD34D"/>
+</svg>
