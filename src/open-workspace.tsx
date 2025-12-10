@@ -1,5 +1,6 @@
-import { Action, ActionPanel, Icon, List } from "@raycast/api";
+import { Icon, List } from "@raycast/api";
 import { useEffect, useState } from "react";
+import { WorkspaceListItem } from "./components/workspace-list-item";
 import type { Workspace } from "./types/workspace";
 import { closeWorkspace, launchWorkspace } from "./utils/launcher";
 import { getAllWorkspaces } from "./utils/storage";
@@ -7,7 +8,6 @@ import { getAllWorkspaces } from "./utils/storage";
 export default function OpenWorkspace() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // Track opened workspaces by id
   const [openedWorkspaceIds, setOpenedWorkspaceIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -16,8 +16,7 @@ export default function OpenWorkspace() {
 
   function loadWorkspaces() {
     try {
-      const data = getAllWorkspaces();
-      setWorkspaces(data);
+      setWorkspaces(getAllWorkspaces());
     } catch (error) {
       console.error("Error loading workspaces:", error);
     } finally {
@@ -25,7 +24,7 @@ export default function OpenWorkspace() {
     }
   }
 
-  async function handleLaunch(workspace: Workspace) {
+  async function handleOpen(workspace: Workspace) {
     await launchWorkspace(workspace.items, workspace.name);
     setOpenedWorkspaceIds((prev) => (prev.includes(workspace.id) ? prev : [...prev, workspace.id]));
   }
@@ -38,6 +37,9 @@ export default function OpenWorkspace() {
     }
   }
 
+  const openedWorkspaces = workspaces.filter((w) => openedWorkspaceIds.includes(w.id));
+  const hasOpenedWorkspaces = openedWorkspaces.length > 0;
+
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search workspaces...">
       {workspaces.length === 0 ? (
@@ -49,70 +51,24 @@ export default function OpenWorkspace() {
       ) : (
         <>
           {/* Opened Workspaces Section */}
-          {openedWorkspaceIds.length > 0 && (
+          {hasOpenedWorkspaces && (
             <List.Section title="Opened Workspaces">
-              {workspaces
-                .filter((w) => openedWorkspaceIds.includes(w.id))
-                .map((workspace) => (
-                  <List.Item
-                    key={`${workspace.id}-opened`}
-                    icon={workspace.icon || Icon.Folder}
-                    title={workspace.name}
-                    subtitle={workspace.description}
-                    accessories={[
-                      {
-                        text: `${workspace.items.length} item${workspace.items.length !== 1 ? "s" : ""}`,
-                        icon: Icon.Document,
-                      },
-                    ]}
-                    actions={
-                      <ActionPanel>
-                        <Action
-                          title="Close Workspace"
-                          icon={Icon.XMarkCircle}
-                          onAction={() => handleClose(workspace.id)}
-                        />
-                        <Action.CopyToClipboard
-                          title="Copy Workspace Info"
-                          content={JSON.stringify(workspace, null, 2)}
-                          shortcut={{ modifiers: ["cmd"], key: "c" }}
-                        />
-                      </ActionPanel>
-                    }
-                  />
-                ))}
+              {openedWorkspaces.map((workspace) => (
+                <WorkspaceListItem
+                  key={`${workspace.id}-opened`}
+                  workspace={workspace}
+                  onOpen={handleOpen}
+                  onClose={handleClose}
+                  isOpened
+                />
+              ))}
             </List.Section>
           )}
+
           {/* All Workspaces Section */}
           <List.Section title="All Workspaces">
             {workspaces.map((workspace) => (
-              <List.Item
-                key={workspace.id}
-                icon={workspace.icon || Icon.Folder}
-                title={workspace.name}
-                subtitle={workspace.description}
-                accessories={[
-                  {
-                    text: `${workspace.items.length} item${workspace.items.length !== 1 ? "s" : ""}`,
-                    icon: Icon.Document,
-                  },
-                ]}
-                actions={
-                  <ActionPanel>
-                    <Action title="Open Workspace" icon={Icon.Rocket} onAction={() => handleLaunch(workspace)} />
-                    {(() => {
-                      // Find first file or folder item to show in Finder
-                      const fileItem = workspace.items.find((item) => item.type === "file" || item.type === "folder");
-                      return fileItem ? <Action.ShowInFinder title="Show in Finder" path={fileItem.path} /> : null;
-                    })()}
-                    <Action.CopyToClipboard
-                      title="Copy Workspace Info"
-                      content={JSON.stringify(workspace, null, 2)}
-                      shortcut={{ modifiers: ["cmd"], key: "c" }}
-                    />
-                  </ActionPanel>
-                }
-              />
+              <WorkspaceListItem key={workspace.id} workspace={workspace} onOpen={handleOpen} />
             ))}
           </List.Section>
         </>

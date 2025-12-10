@@ -15,6 +15,8 @@ declare type Preferences = ExtensionPreferences
 declare namespace Preferences {
   /** Preferences accessible in the `open-workspace` command */
   export type OpenWorkspace = ExtensionPreferences & {}
+  /** Preferences accessible in the `quick-open` command */
+  export type QuickOpen = ExtensionPreferences & {}
   /** Preferences accessible in the `manage-workspaces` command */
   export type ManageWorkspaces = ExtensionPreferences & {}
 }
@@ -22,6 +24,11 @@ declare namespace Preferences {
 declare namespace Arguments {
   /** Arguments passed to the `open-workspace` command */
   export type OpenWorkspace = {}
+  /** Arguments passed to the `quick-open` command */
+  export type QuickOpen = {
+  /** Workspace Name */
+  "workspaceName": string
+}
   /** Arguments passed to the `manage-workspaces` command */
   export type ManageWorkspaces = {}
 }
