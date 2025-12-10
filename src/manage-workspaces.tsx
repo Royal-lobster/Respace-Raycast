@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   Action,
   ActionPanel,
@@ -142,9 +143,9 @@ function CreateWorkspaceForm({ onWorkspaceCreated }: CreateWorkspaceFormProps) {
     }
 
     try {
-      const workspaceItems: WorkspaceItem[] = items.map((item, index) => ({
+      const workspaceItems: WorkspaceItem[] = items.map((item) => ({
         ...item,
-        id: `item-${Date.now()}-${index}`,
+        id: `item-${randomUUID()}`,
       }));
 
       createWorkspace({
@@ -271,7 +272,7 @@ function EditWorkspaceForm({ workspace, onWorkspaceUpdated }: EditWorkspaceFormP
                 onItemAdded={(item) => {
                   const newItem: WorkspaceItem = {
                     ...item,
-                    id: `item-${Date.now()}-${items.length}`,
+                    id: `item-${randomUUID()}`,
                   };
                   setItems([...items, newItem]);
                   pop();

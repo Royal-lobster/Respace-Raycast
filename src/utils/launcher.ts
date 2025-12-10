@@ -44,20 +44,21 @@ async function launchItem(item: WorkspaceItem): Promise<void> {
 
       case "terminal": {
         // Execute terminal command in a new Terminal window
-        // Using AppleScript to open a new terminal window and run the command
-        // Properly escape the command for AppleScript
-        const escapedCommand = item.path
-          .replace(/\\/g, "\\\\") // Escape backslashes first
-          .replace(/"/g, '\\"'); // Then escape double quotes
+        // Use osascript with arguments to avoid command injection
+        // The command is passed as an argument, not embedded in the script
         const script = `
-          tell application "Terminal"
-            activate
-            do script "${escapedCommand}"
-          end tell
+          on run argv
+            tell application "Terminal"
+              activate
+              do script (item 1 of argv as text)
+            end tell
+          end run
         `;
-        // Escape single quotes for the shell command
+        // Escape single quotes for the shell command, pass command as argument
         const escapedScript = script.replace(/'/g, "'\\''");
-        await execAsync(`osascript -e '${escapedScript}'`);
+        // Pass the command as an argument to osascript - this is safer than string interpolation
+        const escapedCommand = item.path.replace(/(["\\$`])/g, "\\$1");
+        await execAsync(`osascript -e '${escapedScript}' '${item.path.replace(/'/g, "'\\''")}'`);
         break;
       }
 

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -71,7 +72,7 @@ export function createWorkspace(workspace: Omit<Workspace, "id" | "createdAt" | 
   const now = new Date().toISOString();
   const newWorkspace: Workspace = {
     ...workspace,
-    id: `workspace-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+    id: `workspace-${randomUUID()}`,
     createdAt: now,
     updatedAt: now,
   };
