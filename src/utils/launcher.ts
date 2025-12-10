@@ -123,3 +123,107 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
     await showHUD(`⚠️ ${successCount}/${items.length} items opened. ${errors[0]}`);
   }
 }
+
+/**
+ * Closes a single workspace item
+ */
+async function closeItem(item: WorkspaceItem): Promise<void> {
+  try {
+    switch (item.type) {
+      case "app": {
+        // Quit application using macOS quit command
+        // Extract app name from path (e.g., "/Applications/Safari.app" -> "Safari")
+        const appName = item.path
+          .replace(/\.app$/, "")
+          .split("/")
+          .pop();
+        if (appName) {
+          await execAsync(`osascript -e 'tell application "${appName}" to quit'`);
+        }
+        break;
+      }
+
+      case "folder":
+      case "file": {
+        // Close file/folder in Finder by closing the window
+        // Note: This will close all Finder windows showing this path
+        const script = `
+          tell application "Finder"
+            try
+              close (every window whose target as text contains "${item.path.replace(/"/g, '\\"')}")
+            end try
+          end tell
+        `;
+        await execAsync(`osascript -e '${script.replace(/'/g, "'\\''")}' 2>/dev/null || true`);
+        break;
+      }
+
+      case "url": {
+        // URLs are opened in browsers, we can't reliably close specific tabs
+        // Skip closing URLs
+        break;
+      }
+
+      case "terminal": {
+        // Terminal commands create new Terminal windows/tabs
+        // We can't reliably track which specific window was created
+        // Skip closing terminal sessions
+        break;
+      }
+
+      default:
+        throw new Error(`Unknown item type: ${item.type}`);
+    }
+  } catch (error) {
+    // Silently fail - the app/file might already be closed
+    console.error(`Failed to close ${item.name}:`, error);
+  }
+}
+
+/**
+ * Closes all items in a workspace
+ */
+export async function closeWorkspace(items: WorkspaceItem[], workspaceName: string): Promise<void> {
+  if (items.length === 0) {
+    await showHUD("❌ Workspace is empty");
+    return;
+  }
+
+  const toast = await showToast({
+    style: Toast.Style.Animated,
+    title: "Closing workspace...",
+    message: workspaceName,
+  });
+
+  let successCount = 0;
+  const errors: string[] = [];
+
+  for (const item of items) {
+    try {
+      await closeItem(item);
+      successCount++;
+      toast.message = `${successCount}/${items.length} items closed`;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      errors.push(errorMsg);
+      console.error(`Error closing ${item.name}:`, error);
+    }
+  }
+
+  // Show final result
+  if (errors.length === 0) {
+    toast.style = Toast.Style.Success;
+    toast.title = "✅ Workspace closed successfully";
+    toast.message = `All ${successCount} items closed`;
+
+    // Also show HUD for quick feedback
+    await showHUD(`✅ Closed ${successCount} items from "${workspaceName}"`);
+  } else {
+    toast.style = Toast.Style.Failure;
+    toast.title = "⚠️ Workspace closed with errors";
+    toast.message = `${successCount}/${items.length} items closed, ${errors.length} failed`;
+
+    // Show first error in HUD
+    await showHUD(`⚠️ ${successCount}/${items.length} items closed. ${errors[0]}`);
+  }
+}

@@ -4,13 +4,13 @@ import {
   Action,
   ActionPanel,
   Alert,
-  confirmAlert,
   Form,
-  getApplications,
   Icon,
   List,
-  showToast,
   Toast,
+  confirmAlert,
+  getApplications,
+  showToast,
   useNavigation,
 } from "@raycast/api";
 import { useEffect, useState } from "react";
@@ -336,8 +336,7 @@ function AddItemForm({ onItemAdded }: AddItemFormProps) {
 
   useEffect(() => {
     setPath("");
-  }, [type]);
-
+  }, []);
   async function handleSubmit() {
     if (!name.trim() || !path.trim()) {
       await showToast({
