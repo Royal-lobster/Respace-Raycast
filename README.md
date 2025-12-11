@@ -1,4 +1,10 @@
+<div align="center">
+
+![Respace Logo](assets/extension.png)
+
 # Respace - Workspace Manager for Raycast
+
+</div>
 
 A powerful Raycast extension to open apps, files, folders, URLs, and terminal commands in organized workspace bundles with a single click.
 
