@@ -21,3 +21,33 @@ export interface Workspace {
 export interface WorkspacesData {
   workspaces: Workspace[];
 }
+
+/**
+ * Represents a tracked window opened by a workspace item
+ */
+export interface TrackedWindow {
+  id: string; // Our generated UUID
+  systemWindowId: number; // macOS System Events window ID
+  itemId: string; // Reference to WorkspaceItem.id
+  appName: string; // Process name for System Events
+  windowTitle?: string; // For verification/debugging
+  type: WorkspaceItemType;
+  launchedAt: number; // Timestamp
+}
+
+/**
+ * Represents an active workspace session with tracked windows
+ */
+export interface WorkspaceSession {
+  workspaceId: string;
+  openedAt: number;
+  lastVerified?: number; // Last time we checked windows still exist
+  windows: TrackedWindow[];
+}
+
+/**
+ * Collection of all active workspace sessions
+ */
+export interface SessionsData {
+  sessions: WorkspaceSession[];
+}

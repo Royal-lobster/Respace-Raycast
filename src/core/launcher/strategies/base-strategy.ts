@@ -1,6 +1,18 @@
-import type { WorkspaceItem } from "../../../types/workspace";
+import type { TrackedWindow, WorkspaceItem } from "../../../types/workspace";
 
 export interface ItemLaunchStrategy {
-  launch(item: WorkspaceItem): Promise<void>;
-  close(item: WorkspaceItem): Promise<void>;
+  /**
+   * Launches an item and returns tracked windows that were opened
+   */
+  launch(item: WorkspaceItem): Promise<TrackedWindow[]>;
+
+  /**
+   * Closes specific tracked windows
+   */
+  close(windows: TrackedWindow[]): Promise<void>;
+
+  /**
+   * Verifies which tracked windows still exist
+   */
+  verifyWindows(windows: TrackedWindow[]): Promise<TrackedWindow[]>;
 }

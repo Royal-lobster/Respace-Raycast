@@ -1,5 +1,5 @@
 import { Toast, showHUD, showToast } from "@raycast/api";
-import type { WorkspaceItem, WorkspaceItemType } from "../../types/workspace";
+import type { TrackedWindow, WorkspaceItem, WorkspaceItemType } from "../../types/workspace";
 import { AppLauncher } from "./strategies/app-launcher";
 import type { ItemLaunchStrategy } from "./strategies/base-strategy";
 import { FileLauncher } from "./strategies/file-launcher";
@@ -25,9 +25,9 @@ const strategies = new Map<WorkspaceItemType, ItemLaunchStrategy>([
 ]);
 
 /**
- * Launches a single workspace item
+ * Launches a single workspace item and returns tracked windows
  */
-async function launchItem(item: WorkspaceItem): Promise<void> {
+async function launchItem(item: WorkspaceItem): Promise<TrackedWindow[]> {
   const strategy = strategies.get(item.type);
   if (!strategy) {
     throw new Error(`Unknown item type: ${item.type}`);
@@ -36,23 +36,42 @@ async function launchItem(item: WorkspaceItem): Promise<void> {
 }
 
 /**
- * Closes a single workspace item
+ * Verifies which tracked windows still exist
  */
-async function closeItem(item: WorkspaceItem): Promise<void> {
-  const strategy = strategies.get(item.type);
-  if (!strategy) {
-    throw new Error(`Unknown item type: ${item.type}`);
+export async function verifyAllWindows(windows: TrackedWindow[]): Promise<TrackedWindow[]> {
+  // Group windows by type to batch verification calls
+  const windowsByType = new Map<WorkspaceItemType, TrackedWindow[]>();
+  for (const window of windows) {
+    const typeWindows = windowsByType.get(window.type) || [];
+    typeWindows.push(window);
+    windowsByType.set(window.type, typeWindows);
   }
-  return strategy.close(item);
+
+  const verified: TrackedWindow[] = [];
+
+  // Verify each type using appropriate strategy
+  for (const [type, typeWindows] of windowsByType) {
+    const strategy = strategies.get(type);
+    if (strategy) {
+      try {
+        const stillExist = await strategy.verifyWindows(typeWindows);
+        verified.push(...stillExist);
+      } catch (error) {
+        console.error(`Error verifying windows for type ${type}:`, error);
+      }
+    }
+  }
+
+  return verified;
 }
 
 /**
- * Launches all items in a workspace with delays
+ * Launches all items in a workspace with delays and returns tracked windows
  */
-export async function launchWorkspace(items: WorkspaceItem[], workspaceName: string): Promise<void> {
+export async function launchWorkspace(items: WorkspaceItem[], workspaceName: string): Promise<TrackedWindow[]> {
   if (items.length === 0) {
     await showHUD("❌ Workspace is empty");
-    return;
+    return [];
   }
 
   const toast = await showToast({
@@ -63,6 +82,7 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
 
   let successCount = 0;
   const errors: string[] = [];
+  const allTrackedWindows: TrackedWindow[] = [];
 
   for (const item of items) {
     try {
@@ -71,7 +91,8 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
         await delay(item.delay);
       }
 
-      await launchItem(item);
+      const trackedWindows = await launchItem(item);
+      allTrackedWindows.push(...trackedWindows);
       successCount++;
 
       toast.message = `${successCount}/${items.length} items launched`;
@@ -98,14 +119,16 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
     // Show first error in HUD
     await showHUD(`⚠️ ${successCount}/${items.length} items opened. ${errors[0]}`);
   }
+
+  return allTrackedWindows;
 }
 
 /**
- * Closes all items in a workspace
+ * Closes specific tracked windows from a workspace
  */
-export async function closeWorkspace(items: WorkspaceItem[], workspaceName: string): Promise<void> {
-  if (items.length === 0) {
-    await showHUD("❌ Workspace is empty");
+export async function closeWorkspace(windows: TrackedWindow[], workspaceName: string): Promise<void> {
+  if (windows.length === 0) {
+    await showHUD("❌ No windows to close");
     return;
   }
 
@@ -115,18 +138,41 @@ export async function closeWorkspace(items: WorkspaceItem[], workspaceName: stri
     message: workspaceName,
   });
 
-  let successCount = 0;
+  // First verify which windows still exist
+  const verifiedWindows = await verifyAllWindows(windows);
+
+  if (verifiedWindows.length === 0) {
+    toast.style = Toast.Style.Success;
+    toast.title = "✅ Workspace already closed";
+    toast.message = "All windows were already closed";
+    await showHUD(`✅ "${workspaceName}" was already closed`);
+    return;
+  }
+
+  // Group verified windows by type
+  const windowsByType = new Map<WorkspaceItemType, TrackedWindow[]>();
+  for (const window of verifiedWindows) {
+    const typeWindows = windowsByType.get(window.type) || [];
+    typeWindows.push(window);
+    windowsByType.set(window.type, typeWindows);
+  }
+
+  let closedCount = 0;
   const errors: string[] = [];
 
-  for (const item of items) {
-    try {
-      await closeItem(item);
-      successCount++;
-      toast.message = `${successCount}/${items.length} items closed`;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      errors.push(errorMsg);
-      console.error(`Error closing ${item.name}:`, error);
+  // Close each type using appropriate strategy
+  for (const [type, typeWindows] of windowsByType) {
+    const strategy = strategies.get(type);
+    if (strategy) {
+      try {
+        await strategy.close(typeWindows);
+        closedCount += typeWindows.length;
+        toast.message = `${closedCount}/${verifiedWindows.length} windows closed`;
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        errors.push(errorMsg);
+        console.error(`Error closing windows for type ${type}:`, error);
+      }
     }
   }
 
@@ -134,16 +180,16 @@ export async function closeWorkspace(items: WorkspaceItem[], workspaceName: stri
   if (errors.length === 0) {
     toast.style = Toast.Style.Success;
     toast.title = "✅ Workspace closed successfully";
-    toast.message = `All ${successCount} items closed`;
+    toast.message = `Closed ${closedCount} windows`;
 
     // Also show HUD for quick feedback
-    await showHUD(`✅ Closed ${successCount} items from "${workspaceName}"`);
+    await showHUD(`✅ Closed ${closedCount} windows from "${workspaceName}"`);
   } else {
     toast.style = Toast.Style.Failure;
     toast.title = "⚠️ Workspace closed with errors";
-    toast.message = `${successCount}/${items.length} items closed, ${errors.length} failed`;
+    toast.message = `${closedCount}/${verifiedWindows.length} windows closed, ${errors.length} failed`;
 
     // Show first error in HUD
-    await showHUD(`⚠️ ${successCount}/${items.length} items closed. ${errors[0]}`);
+    await showHUD(`⚠️ ${closedCount}/${verifiedWindows.length} windows closed. ${errors[0]}`);
   }
 }
