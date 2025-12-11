@@ -15,12 +15,14 @@
 			"name": "open-workspace",
 			"title": "Open Workspace",
 			"description": "Browse and open workspace bundles",
+			"subtitle": "Respace",
 			"mode": "view"
 		},
 		{
 			"name": "quick-open",
 			"title": "Quick Open Workspace",
 			"description": "Quickly open a workspace by name",
+			"subtitle": "Respace",
 			"mode": "no-view",
 			"arguments": [
 				{
@@ -35,6 +37,7 @@
 			"name": "manage-workspaces",
 			"title": "Manage Workspaces",
 			"description": "Create, edit, and delete workspaces",
+			"subtitle": "Respace",
 			"mode": "view"
 		}
 	],
