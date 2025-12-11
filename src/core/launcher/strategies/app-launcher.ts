@@ -1,8 +1,9 @@
+import { type ChildProcess, exec } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { exec, type ChildProcess } from "node:child_process";
 import { promisify } from "node:util";
-import type { TrackedWindow, WorkspaceItem, TrackingMode } from "../../../types/workspace";
-import type { ItemLaunchStrategy, BeforeLaunchState } from "./base-strategy";
+import type { TrackedWindow, TrackingMode, WorkspaceItem } from "../../../types/workspace";
+import { delay } from "../../utils/delay";
+import type { BeforeLaunchState, ItemLaunchStrategy } from "./base-strategy";
 
 const execAsync = promisify(exec);
 
@@ -21,10 +22,6 @@ const TIMEOUTS = {
 // ============================================================================
 // Utility Functions
 // ============================================================================
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Executes a shell command with a timeout.
@@ -61,6 +58,45 @@ function escapeForShell(str: string): string {
 }
 
 /**
+ * Validates that appName contains only safe characters (alphanumerics, spaces, dashes, underscores, dots).
+ * @throws Error if appName contains unsafe characters
+ */
+function validateAppName(appName: string): void {
+  if (!/^[\w\s\-\.]+$/.test(appName)) {
+    throw new Error(
+      `Unsafe app name: "${appName}". App name must contain only alphanumerics, spaces, dashes, underscores, and dots.`
+    );
+  }
+}
+
+/**
+ * Validates that path is a safe string for shell commands.
+ * Paths should start with / or ~, and not contain dangerous patterns.
+ * @throws Error if path contains potentially dangerous characters
+ */
+function validatePath(path: string): void {
+  // Check for absolute paths or home directory paths
+  if (!path.startsWith("/") && !path.startsWith("~") && !path.startsWith(".")) {
+    throw new Error(`Invalid path: "${path}". Path must be absolute or start with ~`);
+  }
+
+  // Check for dangerous patterns (backticks, semicolons, pipes, etc.)
+  if (/[`$;|&><]/.test(path)) {
+    throw new Error(`Unsafe path: "${path}". Path contains potentially dangerous shell characters.`);
+  }
+}
+
+/**
+ * Validates that windowId is a finite number.
+ * @throws Error if windowId is not a finite number
+ */
+function validateWindowId(windowId: number): void {
+  if (!Number.isFinite(windowId)) {
+    throw new Error(`Invalid window ID: ${windowId}. Window ID must be a finite number.`);
+  }
+}
+
+/**
  * Runs an AppleScript with timeout protection.
  */
 function runAppleScript(script: string, timeoutMs: number): Promise<string> {
@@ -73,28 +109,41 @@ function runAppleScript(script: string, timeoutMs: number): Promise<string> {
 
 const AppleScripts = {
   /** Get all window IDs for an app */
-  getWindowIds: (appName: string) => `tell application "${appName}"
+  getWindowIds: (appName: string) => {
+    validateAppName(appName);
+    return `tell application "${appName}"
   if (count of windows) > 0 then
     get id of every window
   else
     return ""
   end if
-end tell`,
+end tell`;
+  },
 
   /** Get title of a specific window by ID */
-  getWindowTitle: (appName: string, windowId: number) => `tell application "${appName}"
+  getWindowTitle: (appName: string, windowId: number) => {
+    validateAppName(appName);
+    validateWindowId(windowId);
+    return `tell application "${appName}"
   repeat with w in windows
     if id of w is ${windowId} then
       return name of w
     end if
   end repeat
-end tell`,
+end tell`;
+  },
 
   /** Quit an application gracefully */
-  quitApp: (appName: string) => `tell application "${appName}" to quit`,
+  quitApp: (appName: string) => {
+    validateAppName(appName);
+    return `tell application "${appName}" to quit`;
+  },
 
   /** Close a specific window using System Events (UI scripting) */
-  closeWindowViaSystemEvents: (appName: string, windowId: number) => `tell application "System Events"
+  closeWindowViaSystemEvents: (appName: string, windowId: number) => {
+    validateAppName(appName);
+    validateWindowId(windowId);
+    return `tell application "System Events"
   if exists process "${appName}" then
     tell process "${appName}"
       set windowList to every window
@@ -106,10 +155,14 @@ end tell`,
       end repeat
     end tell
   end if
-end tell`,
+end tell`;
+  },
 
   /** Close a specific window via direct app command */
-  closeWindowViaApp: (appName: string, windowId: number) => `tell application "${appName}"
+  closeWindowViaApp: (appName: string, windowId: number) => {
+    validateAppName(appName);
+    validateWindowId(windowId);
+    return `tell application "${appName}"
   set windowList to every window
   repeat with w in windowList
     if id of w is ${windowId} then
@@ -117,7 +170,8 @@ end tell`,
       return
     end if
   end repeat
-end tell`,
+end tell`;
+  },
 };
 
 // ============================================================================
@@ -143,8 +197,9 @@ export class AppLauncher implements ItemLaunchStrategy {
 
   /** Check if app is running using pgrep (fast, no AppleScript overhead) */
   private async isAppRunning(appName: string): Promise<boolean> {
+    validateAppName(appName);
     try {
-      const { stdout } = await execAsync(`pgrep -x "${appName}" 2>/dev/null || true`);
+      const { stdout } = await execAsync(`pgrep -x '${escapeForShell(appName)}' 2>/dev/null || true`);
       return stdout.trim().length > 0;
     } catch {
       return false;
@@ -223,8 +278,10 @@ export class AppLauncher implements ItemLaunchStrategy {
    */
   async launchOnly(item: WorkspaceItem): Promise<void> {
     const appName = this.getAppName(item);
+    validateAppName(appName);
+    validatePath(item.path);
     console.log(`[${appName}] Launching...`);
-    await execAsync(`open -a "${item.path}"`);
+    await execAsync(`open -a '${escapeForShell(item.path)}'`);
   }
 
   /**
@@ -295,12 +352,59 @@ export class AppLauncher implements ItemLaunchStrategy {
 
   /** Quit an entire application */
   private async closeApp(appName: string): Promise<void> {
+    validateAppName(appName);
     console.log(`Quitting ${appName} (app-level)`);
     try {
       await runAppleScript(AppleScripts.quitApp(appName), 2000);
     } catch {
-      // Fallback: force quit if graceful quit fails
-      await execAsync(`killall "${appName}"`).catch(() => {});
+      // Fallback: try to kill individual PIDs for the app
+      await this.forceQuitApp(appName);
+    }
+  }
+
+  /** Get all PIDs for a given app name using pgrep */
+  private async getAppPIDs(appName: string): Promise<number[]> {
+    validateAppName(appName);
+    try {
+      const { stdout } = await execAsync(`pgrep -x '${escapeForShell(appName)}' 2>/dev/null || true`);
+      // stdout may contain multiple PIDs separated by newlines
+      return stdout
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => Number(line))
+        .filter((pid) => !Number.isNaN(pid));
+    } catch (e) {
+      // pgrep returns non-zero exit code if no process found
+      return [];
+    }
+  }
+
+  /** Force quit an app by killing its PIDs */
+  private async forceQuitApp(appName: string): Promise<void> {
+    const pids = await this.getAppPIDs(appName);
+    if (pids.length === 0) {
+      console.warn(`No running processes found for "${appName}" to force quit.`);
+      return;
+    }
+
+    if (pids.length > 1) {
+      console.warn(
+        `Multiple (${pids.length}) processes found for "${appName}". All will be killed. This may affect other running instances.`
+      );
+    }
+
+    for (const pid of pids) {
+      // Validate PID is a positive integer
+      if (!Number.isInteger(pid) || pid <= 0) {
+        console.warn(`Invalid PID ${pid} for "${appName}", skipping`);
+        continue;
+      }
+      try {
+        await execAsync(`kill ${pid}`);
+      } catch (e) {
+        console.error(`Failed to kill PID ${pid} for "${appName}":`, e);
+      }
     }
   }
 

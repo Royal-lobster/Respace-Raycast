@@ -44,7 +44,7 @@ When launching an app, the extension tries multiple methods to get window IDs:
 1. **Check if app was already running** before launch
 2. **Get window IDs before** launching
 3. **Launch the application**
-4. **Wait 2 seconds** for windows to appear
+4. **Wait 1.5 seconds** for windows to appear (matches `APP_INIT_DELAY` in code)
 5. **Get window IDs after** launching
 6. **Compare before/after** to find new windows
 7. **Determine tracking mode**:

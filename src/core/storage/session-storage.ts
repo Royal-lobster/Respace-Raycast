@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { SessionsData, TrackedWindow, WorkspaceSession } from "../../types/workspace";
 import { CONFIG_DIR, SESSIONS_FILE } from "./constants";
 
@@ -7,7 +7,6 @@ import { CONFIG_DIR, SESSIONS_FILE } from "./constants";
  */
 function ensureConfigDir(): void {
   if (!existsSync(CONFIG_DIR)) {
-    const { mkdirSync } = require("node:fs");
     mkdirSync(CONFIG_DIR, { recursive: true });
   }
 }

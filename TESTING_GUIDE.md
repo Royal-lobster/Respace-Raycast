@@ -5,7 +5,7 @@
 ### 1. Build the Extension
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 The extension will automatically reload in Raycast during development.
@@ -226,9 +226,9 @@ Look for these console messages:
 
 ## Performance Notes
 
-- Each app launch waits 2 seconds for windows to appear
-- Workspace with 5 apps = ~10 seconds total launch time
-- This is intentional to ensure windows are detected
+- Apps are launched in parallel within delay groups (phases), with each group waiting 1.5 seconds (APP_INIT_DELAY) for windows to appear
+- Workspace with 5 apps in 3 delay groups = ~4.5 seconds total launch time (not 10 seconds)
+- This is intentional to ensure windows are detected; total launch time depends on the number of delay groups, not the number of apps
 - Future optimization could make this configurable
 
 ## Verification Checklist

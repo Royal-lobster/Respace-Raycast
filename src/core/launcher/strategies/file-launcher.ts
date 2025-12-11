@@ -1,16 +1,13 @@
-import { randomUUID } from "node:crypto";
 import { exec } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { promisify } from "node:util";
 import { open } from "@raycast/api";
 import type { TrackedWindow, WorkspaceItem } from "../../../types/workspace";
+import { delay } from "../../utils/delay";
 import type { ItemLaunchStrategy } from "./base-strategy";
 
 const execAsync = promisify(exec);
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export class FileLauncher implements ItemLaunchStrategy {
   private async getFinderWindowIds(): Promise<number[]> {
@@ -37,6 +34,7 @@ export class FileLauncher implements ItemLaunchStrategy {
       const beforeIds = await this.getFinderWindowIds();
 
       await open(item.path);
+      // Wait 1500ms for Finder window to appear (file operations can be slower than apps)
       await delay(1500);
 
       const afterIds = await this.getFinderWindowIds();
@@ -59,6 +57,9 @@ export class FileLauncher implements ItemLaunchStrategy {
 
   async close(windows: TrackedWindow[]): Promise<void> {
     for (const window of windows) {
+      if (typeof window.systemWindowId !== "number" || !Number.isFinite(window.systemWindowId)) {
+        continue;
+      }
       try {
         await execAsync(
           `osascript -e 'tell application "Finder" to close window id ${window.systemWindowId}' 2>/dev/null || true`
