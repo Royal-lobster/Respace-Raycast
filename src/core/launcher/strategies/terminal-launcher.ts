@@ -2,7 +2,7 @@ import { exec } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import type { TrackedWindow, WorkspaceItem } from "../../../types/workspace";
-import { delay } from "../../utils/delay";
+import { delay, escapeForShell } from "../../utils/delay";
 import type { ItemLaunchStrategy } from "./base-strategy";
 
 const execAsync = promisify(exec);
@@ -18,7 +18,7 @@ export class TerminalLauncher implements ItemLaunchStrategy {
           get id of every window
         end tell
       `;
-      const { stdout } = await execAsync(`osascript -e '${script.replace(/'/g, "'\\''")}' 2>/dev/null || echo ""`);
+      const { stdout } = await execAsync(`osascript -e '${escapeForShell(script)}' 2>/dev/null || echo ""`);
       const trimmed = stdout.trim();
       if (!trimmed) return [];
 
@@ -45,8 +45,8 @@ export class TerminalLauncher implements ItemLaunchStrategy {
           end tell
         end run
       `;
-      const escapedScript = script.replace(/'/g, "'\\''");
-      await execAsync(`osascript -e '${escapedScript}' '${item.path.replace(/'/g, "'\\''")}'`);
+      const escapedScript = escapeForShell(script);
+      await execAsync(`osascript -e '${escapedScript}' '${escapeForShell(item.path)}'`);
 
       // Wait 500ms for Terminal window to appear (allows time for window creation and registration)
       await delay(500);
@@ -90,7 +90,7 @@ export class TerminalLauncher implements ItemLaunchStrategy {
             end repeat
           end tell
         `;
-        await execAsync(`osascript -e '${script.replace(/'/g, "'\\''")}' 2>/dev/null || true`);
+        await execAsync(`osascript -e '${escapeForShell(script)}' 2>/dev/null || true`);
       } catch (error) {
         // Silently fail - the window might already be closed
         console.error(`Failed to close Terminal window ${window.systemWindowId}:`, error);

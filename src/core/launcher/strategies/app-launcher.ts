@@ -70,6 +70,23 @@ function validateAppName(appName: string): void {
 }
 
 /**
+ * Validates that path is a safe string for shell commands.
+ * Paths should start with / or ~, and not contain dangerous patterns.
+ * @throws Error if path contains potentially dangerous characters
+ */
+function validatePath(path: string): void {
+  // Check for absolute paths or home directory paths
+  if (!path.startsWith("/") && !path.startsWith("~") && !path.startsWith(".")) {
+    throw new Error(`Invalid path: "${path}". Path must be absolute or start with ~`);
+  }
+
+  // Check for dangerous patterns (backticks, semicolons, pipes, etc.)
+  if (/[`$;|&><]/.test(path)) {
+    throw new Error(`Unsafe path: "${path}". Path contains potentially dangerous shell characters.`);
+  }
+}
+
+/**
  * Validates that windowId is a finite number.
  * @throws Error if windowId is not a finite number
  */
@@ -182,7 +199,7 @@ export class AppLauncher implements ItemLaunchStrategy {
   private async isAppRunning(appName: string): Promise<boolean> {
     validateAppName(appName);
     try {
-      const { stdout } = await execAsync(`pgrep -x "${escapeForShell(appName)}" 2>/dev/null || true`);
+      const { stdout } = await execAsync(`pgrep -x '${escapeForShell(appName)}' 2>/dev/null || true`);
       return stdout.trim().length > 0;
     } catch {
       return false;
@@ -262,6 +279,7 @@ export class AppLauncher implements ItemLaunchStrategy {
   async launchOnly(item: WorkspaceItem): Promise<void> {
     const appName = this.getAppName(item);
     validateAppName(appName);
+    validatePath(item.path);
     console.log(`[${appName}] Launching...`);
     await execAsync(`open -a '${escapeForShell(item.path)}'`);
   }
@@ -348,7 +366,7 @@ export class AppLauncher implements ItemLaunchStrategy {
   private async getAppPIDs(appName: string): Promise<number[]> {
     validateAppName(appName);
     try {
-      const { stdout } = await execAsync(`pgrep -x '${escapeForShell(appName)}'`);
+      const { stdout } = await execAsync(`pgrep -x '${escapeForShell(appName)}' 2>/dev/null || true`);
       // stdout may contain multiple PIDs separated by newlines
       return stdout
         .split("\n")
@@ -377,6 +395,11 @@ export class AppLauncher implements ItemLaunchStrategy {
     }
 
     for (const pid of pids) {
+      // Validate PID is a positive integer
+      if (!Number.isInteger(pid) || pid <= 0) {
+        console.warn(`Invalid PID ${pid} for "${appName}", skipping`);
+        continue;
+      }
       try {
         await execAsync(`kill ${pid}`);
       } catch (e) {
