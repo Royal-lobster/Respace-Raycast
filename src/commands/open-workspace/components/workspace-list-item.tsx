@@ -13,12 +13,19 @@ interface WorkspaceListItemProps {
 /**
  * Reusable list item component for displaying a workspace
  */
-export function WorkspaceListItem({ workspace, onOpen, onClose, isOpened = false }: WorkspaceListItemProps) {
+export function WorkspaceListItem({
+  workspace,
+  onOpen,
+  onClose,
+  isOpened = false,
+}: WorkspaceListItemProps) {
   const itemCount = workspace.items.length;
   const itemLabel = `${itemCount} item${itemCount !== 1 ? "s" : ""}`;
 
   // Find first file or folder item for "Show in Finder" action
-  const fileOrFolderItem = workspace.items.find((item) => item.type === "file" || item.type === "folder");
+  const fileOrFolderItem = workspace.items.find(
+    (item) => item.type === "file" || item.type === "folder",
+  );
 
   return (
     <List.Item
@@ -32,7 +39,11 @@ export function WorkspaceListItem({ workspace, onOpen, onClose, isOpened = false
           {isOpened && onClose ? (
             // Actions for opened workspace
             <>
-              <Action title="Close Workspace" icon={Icon.XMarkCircle} onAction={() => onClose(workspace.id)} />
+              <Action
+                title="Close Workspace"
+                icon={Icon.XMarkCircle}
+                onAction={() => onClose(workspace.id)}
+              />
               <Action.CopyToClipboard
                 title="Copy Workspace Info"
                 content={JSON.stringify(workspace, null, 2)}
@@ -42,7 +53,11 @@ export function WorkspaceListItem({ workspace, onOpen, onClose, isOpened = false
           ) : (
             // Actions for closed workspace
             <>
-              <Action title="Open Workspace" icon={Icon.Rocket} onAction={() => onOpen(workspace)} />
+              <Action
+                title="Open Workspace"
+                icon={Icon.Rocket}
+                onAction={() => onOpen(workspace)}
+              />
               <Action.CreateQuicklink
                 title="Create Quicklink"
                 quicklink={{
@@ -51,7 +66,12 @@ export function WorkspaceListItem({ workspace, onOpen, onClose, isOpened = false
                 }}
                 shortcut={{ modifiers: ["cmd", "shift"], key: "q" }}
               />
-              {fileOrFolderItem && <Action.ShowInFinder title="Show in Finder" path={fileOrFolderItem.path} />}
+              {fileOrFolderItem && (
+                <Action.ShowInFinder
+                  title="Show in Finder"
+                  path={fileOrFolderItem.path}
+                />
+              )}
               <Action.CopyToClipboard
                 title="Copy Workspace Info"
                 content={JSON.stringify(workspace, null, 2)}

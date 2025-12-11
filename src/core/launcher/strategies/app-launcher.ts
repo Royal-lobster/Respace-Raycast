@@ -1,7 +1,11 @@
 import { type ChildProcess, exec } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
-import type { TrackedWindow, TrackingMode, WorkspaceItem } from "../../../types/workspace";
+import type {
+  TrackedWindow,
+  TrackingMode,
+  WorkspaceItem,
+} from "../../../types/workspace";
 import { delay } from "../../utils/delay";
 import type { BeforeLaunchState, ItemLaunchStrategy } from "./base-strategy";
 
@@ -62,9 +66,9 @@ function escapeForShell(str: string): string {
  * @throws Error if appName contains unsafe characters
  */
 function validateAppName(appName: string): void {
-  if (!/^[\w\s\-\.]+$/.test(appName)) {
+  if (!/^[\w\s\-.]+$/.test(appName)) {
     throw new Error(
-      `Unsafe app name: "${appName}". App name must contain only alphanumerics, spaces, dashes, underscores, and dots.`
+      `Unsafe app name: "${appName}". App name must contain only alphanumerics, spaces, dashes, underscores, and dots.`,
     );
   }
 }
@@ -77,12 +81,16 @@ function validateAppName(appName: string): void {
 function validatePath(path: string): void {
   // Check for absolute paths or home directory paths
   if (!path.startsWith("/") && !path.startsWith("~") && !path.startsWith(".")) {
-    throw new Error(`Invalid path: "${path}". Path must be absolute or start with ~`);
+    throw new Error(
+      `Invalid path: "${path}". Path must be absolute or start with ~`,
+    );
   }
 
   // Check for dangerous patterns (backticks, semicolons, pipes, etc.)
   if (/[`$;|&><]/.test(path)) {
-    throw new Error(`Unsafe path: "${path}". Path contains potentially dangerous shell characters.`);
+    throw new Error(
+      `Unsafe path: "${path}". Path contains potentially dangerous shell characters.`,
+    );
   }
 }
 
@@ -92,7 +100,9 @@ function validatePath(path: string): void {
  */
 function validateWindowId(windowId: number): void {
   if (!Number.isFinite(windowId)) {
-    throw new Error(`Invalid window ID: ${windowId}. Window ID must be a finite number.`);
+    throw new Error(
+      `Invalid window ID: ${windowId}. Window ID must be a finite number.`,
+    );
   }
 }
 
@@ -199,7 +209,9 @@ export class AppLauncher implements ItemLaunchStrategy {
   private async isAppRunning(appName: string): Promise<boolean> {
     validateAppName(appName);
     try {
-      const { stdout } = await execAsync(`pgrep -x '${escapeForShell(appName)}' 2>/dev/null || true`);
+      const { stdout } = await execAsync(
+        `pgrep -x '${escapeForShell(appName)}' 2>/dev/null || true`,
+      );
       return stdout.trim().length > 0;
     } catch {
       return false;
@@ -208,7 +220,10 @@ export class AppLauncher implements ItemLaunchStrategy {
 
   /** Get window IDs for an app (with timeout protection) */
   private async getWindowIds(appName: string): Promise<number[]> {
-    const stdout = await runAppleScript(AppleScripts.getWindowIds(appName), TIMEOUTS.WINDOW_ID_QUERY);
+    const stdout = await runAppleScript(
+      AppleScripts.getWindowIds(appName),
+      TIMEOUTS.WINDOW_ID_QUERY,
+    );
 
     if (!stdout.trim()) return [];
 
@@ -225,14 +240,22 @@ export class AppLauncher implements ItemLaunchStrategy {
   }
 
   /** Get window title by ID (with timeout protection) */
-  private async getWindowTitle(appName: string, windowId: number): Promise<string | undefined> {
-    const stdout = await runAppleScript(AppleScripts.getWindowTitle(appName, windowId), TIMEOUTS.WINDOW_TITLE_QUERY);
+  private async getWindowTitle(
+    appName: string,
+    windowId: number,
+  ): Promise<string | undefined> {
+    const stdout = await runAppleScript(
+      AppleScripts.getWindowTitle(appName, windowId),
+      TIMEOUTS.WINDOW_TITLE_QUERY,
+    );
     return stdout.trim() || undefined;
   }
 
   /** Poll until app is running or timeout */
   private async waitForAppToLaunch(appName: string): Promise<void> {
-    const maxAttempts = Math.ceil(TIMEOUTS.APP_LAUNCH_POLL / TIMEOUTS.APP_LAUNCH_POLL_INTERVAL);
+    const maxAttempts = Math.ceil(
+      TIMEOUTS.APP_LAUNCH_POLL / TIMEOUTS.APP_LAUNCH_POLL_INTERVAL,
+    );
 
     for (let i = 0; i < maxAttempts; i++) {
       if (await this.isAppRunning(appName)) {
@@ -249,7 +272,7 @@ export class AppLauncher implements ItemLaunchStrategy {
     appName: string,
     trackingMode: TrackingMode,
     systemWindowId: number,
-    windowTitle?: string
+    windowTitle?: string,
   ): TrackedWindow {
     return {
       id: randomUUID(),
@@ -268,8 +291,13 @@ export class AppLauncher implements ItemLaunchStrategy {
    */
   async captureBeforeState(item: WorkspaceItem): Promise<BeforeLaunchState> {
     const appName = this.getAppName(item);
-    const [wasRunning, windowIdsBefore] = await Promise.all([this.isAppRunning(appName), this.getWindowIds(appName)]);
-    console.log(`[${appName}] Before: running=${wasRunning}, windows=${windowIdsBefore.join(",") || "none"}`);
+    const [wasRunning, windowIdsBefore] = await Promise.all([
+      this.isAppRunning(appName),
+      this.getWindowIds(appName),
+    ]);
+    console.log(
+      `[${appName}] Before: running=${wasRunning}, windows=${windowIdsBefore.join(",") || "none"}`,
+    );
     return { item, wasRunning, windowIdsBefore, appName };
   }
 
@@ -287,7 +315,9 @@ export class AppLauncher implements ItemLaunchStrategy {
   /**
    * Phase 3: Capture state after launching and determine tracking mode
    */
-  async captureAfterState(beforeState: BeforeLaunchState): Promise<TrackedWindow[]> {
+  async captureAfterState(
+    beforeState: BeforeLaunchState,
+  ): Promise<TrackedWindow[]> {
     const { item, wasRunning, windowIdsBefore, appName } = beforeState;
 
     // Wait for app to be ready
@@ -300,14 +330,20 @@ export class AppLauncher implements ItemLaunchStrategy {
     // Get windows after launch
     const afterIds = await this.getWindowIds(appName);
     const newWindowIds = afterIds.filter((id) => !windowIdsBefore.includes(id));
-    console.log(`[${appName}] After: windows=${afterIds.join(",") || "none"}, new=${newWindowIds.length}`);
+    console.log(
+      `[${appName}] After: windows=${afterIds.join(",") || "none"}, new=${newWindowIds.length}`,
+    );
 
     // Determine tracking mode based on what we found
     if (newWindowIds.length > 0) {
       // Window-level tracking: we can track individual windows
       console.log(`[${appName}] Using WINDOW-LEVEL tracking`);
-      const titles = await Promise.all(newWindowIds.map((id) => this.getWindowTitle(appName, id)));
-      return newWindowIds.map((windowId, i) => this.createTrackedWindow(item, appName, "window", windowId, titles[i]));
+      const titles = await Promise.all(
+        newWindowIds.map((id) => this.getWindowTitle(appName, id)),
+      );
+      return newWindowIds.map((windowId, i) =>
+        this.createTrackedWindow(item, appName, "window", windowId, titles[i]),
+      );
     }
 
     if (!wasRunning) {
@@ -331,7 +367,9 @@ export class AppLauncher implements ItemLaunchStrategy {
       await this.launchOnly(item);
       return await this.captureAfterState(beforeState);
     } catch (error) {
-      throw new Error(`Failed to launch ${item.name}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to launch ${item.name}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -366,7 +404,9 @@ export class AppLauncher implements ItemLaunchStrategy {
   private async getAppPIDs(appName: string): Promise<number[]> {
     validateAppName(appName);
     try {
-      const { stdout } = await execAsync(`pgrep -x '${escapeForShell(appName)}' 2>/dev/null || true`);
+      const { stdout } = await execAsync(
+        `pgrep -x '${escapeForShell(appName)}' 2>/dev/null || true`,
+      );
       // stdout may contain multiple PIDs separated by newlines
       return stdout
         .split("\n")
@@ -384,13 +424,15 @@ export class AppLauncher implements ItemLaunchStrategy {
   private async forceQuitApp(appName: string): Promise<void> {
     const pids = await this.getAppPIDs(appName);
     if (pids.length === 0) {
-      console.warn(`No running processes found for "${appName}" to force quit.`);
+      console.warn(
+        `No running processes found for "${appName}" to force quit.`,
+      );
       return;
     }
 
     if (pids.length > 1) {
       console.warn(
-        `Multiple (${pids.length}) processes found for "${appName}". All will be killed. This may affect other running instances.`
+        `Multiple (${pids.length}) processes found for "${appName}". All will be killed. This may affect other running instances.`,
       );
     }
 
@@ -414,14 +456,20 @@ export class AppLauncher implements ItemLaunchStrategy {
 
     // Try System Events first (UI scripting)
     try {
-      await runAppleScript(AppleScripts.closeWindowViaSystemEvents(appName, windowId), 2000);
+      await runAppleScript(
+        AppleScripts.closeWindowViaSystemEvents(appName, windowId),
+        2000,
+      );
       return;
     } catch {
       // Fall through to direct app method
     }
 
     // Fallback: direct app close command
-    await runAppleScript(AppleScripts.closeWindowViaApp(appName, windowId), 2000);
+    await runAppleScript(
+      AppleScripts.closeWindowViaApp(appName, windowId),
+      2000,
+    );
   }
 
   async verifyWindows(windows: TrackedWindow[]): Promise<TrackedWindow[]> {
@@ -439,10 +487,14 @@ export class AppLauncher implements ItemLaunchStrategy {
         verified.push(...appLevel);
 
         // Window-level: valid if specific window ID still exists
-        const windowLevel = appWindows.filter((w) => w.trackingMode === "window");
+        const windowLevel = appWindows.filter(
+          (w) => w.trackingMode === "window",
+        );
         if (windowLevel.length > 0) {
           const currentIds = await this.getWindowIds(appName);
-          const stillExists = windowLevel.filter((w) => currentIds.includes(w.systemWindowId));
+          const stillExists = windowLevel.filter((w) =>
+            currentIds.includes(w.systemWindowId),
+          );
           verified.push(...stillExists);
         }
       } catch (error) {

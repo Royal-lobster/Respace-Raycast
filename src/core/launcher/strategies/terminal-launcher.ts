@@ -18,7 +18,9 @@ export class TerminalLauncher implements ItemLaunchStrategy {
           get id of every window
         end tell
       `;
-      const { stdout } = await execAsync(`osascript -e '${escapeForShell(script)}' 2>/dev/null || echo ""`);
+      const { stdout } = await execAsync(
+        `osascript -e '${escapeForShell(script)}' 2>/dev/null || echo ""`,
+      );
       const trimmed = stdout.trim();
       if (!trimmed) return [];
 
@@ -46,7 +48,9 @@ export class TerminalLauncher implements ItemLaunchStrategy {
         end run
       `;
       const escapedScript = escapeForShell(script);
-      await execAsync(`osascript -e '${escapedScript}' '${escapeForShell(item.path)}'`);
+      await execAsync(
+        `osascript -e '${escapedScript}' '${escapeForShell(item.path)}'`,
+      );
 
       // Wait 500ms for Terminal window to appear (allows time for window creation and registration)
       await delay(500);
@@ -68,13 +72,18 @@ export class TerminalLauncher implements ItemLaunchStrategy {
         launchedAt: Date.now(),
       }));
     } catch (error) {
-      throw new Error(`Failed to launch ${item.name}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to launch ${item.name}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   async close(windows: TrackedWindow[]): Promise<void> {
     for (const window of windows) {
-      if (typeof window.systemWindowId !== "number" || !Number.isFinite(window.systemWindowId)) {
+      if (
+        typeof window.systemWindowId !== "number" ||
+        !Number.isFinite(window.systemWindowId)
+      ) {
         continue;
       }
       try {
@@ -90,10 +99,15 @@ export class TerminalLauncher implements ItemLaunchStrategy {
             end repeat
           end tell
         `;
-        await execAsync(`osascript -e '${escapeForShell(script)}' 2>/dev/null || true`);
+        await execAsync(
+          `osascript -e '${escapeForShell(script)}' 2>/dev/null || true`,
+        );
       } catch (error) {
         // Silently fail - the window might already be closed
-        console.error(`Failed to close Terminal window ${window.systemWindowId}:`, error);
+        console.error(
+          `Failed to close Terminal window ${window.systemWindowId}:`,
+          error,
+        );
       }
     }
   }
@@ -101,7 +115,9 @@ export class TerminalLauncher implements ItemLaunchStrategy {
   async verifyWindows(windows: TrackedWindow[]): Promise<TrackedWindow[]> {
     try {
       const currentIds = await this.getTerminalWindowIds();
-      return windows.filter((window) => currentIds.includes(window.systemWindowId));
+      return windows.filter((window) =>
+        currentIds.includes(window.systemWindowId),
+      );
     } catch (error) {
       console.error("Error verifying Terminal windows:", error);
       return [];

@@ -14,7 +14,12 @@ import {
 import { useState } from "react";
 import { updateWorkspace } from "../../../core/storage/storage";
 import type { Workspace, WorkspaceItem } from "../../../types/workspace";
-import { getItemColor, getItemIcon, getItemSubtitle, getTypeName } from "../utils/workspace-helpers";
+import {
+  getItemColor,
+  getItemIcon,
+  getItemSubtitle,
+  getTypeName,
+} from "../utils/workspace-helpers";
 import { AddItemForm } from "./add-item-form";
 import { EditItemForm } from "./edit-item-form";
 
@@ -23,7 +28,10 @@ interface ManageItemsViewProps {
   onWorkspaceUpdated: () => void;
 }
 
-export function ManageItemsView({ workspace, onWorkspaceUpdated }: ManageItemsViewProps) {
+export function ManageItemsView({
+  workspace,
+  onWorkspaceUpdated,
+}: ManageItemsViewProps) {
   const { pop } = useNavigation();
   const [items, setItems] = useState<WorkspaceItem[]>(workspace.items);
 
@@ -49,7 +57,10 @@ export function ManageItemsView({ workspace, onWorkspaceUpdated }: ManageItemsVi
   async function handleMoveUp(index: number) {
     if (index === 0) return;
     const newItems = [...items];
-    [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
+    [newItems[index - 1], newItems[index]] = [
+      newItems[index],
+      newItems[index - 1],
+    ];
     setItems(newItems);
     updateWorkspace(workspace.id, { items: newItems });
     onWorkspaceUpdated();
@@ -58,14 +69,20 @@ export function ManageItemsView({ workspace, onWorkspaceUpdated }: ManageItemsVi
   async function handleMoveDown(index: number) {
     if (index === items.length - 1) return;
     const newItems = [...items];
-    [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
+    [newItems[index], newItems[index + 1]] = [
+      newItems[index + 1],
+      newItems[index],
+    ];
     setItems(newItems);
     updateWorkspace(workspace.id, { items: newItems });
     onWorkspaceUpdated();
   }
 
   return (
-    <List navigationTitle={`Items in ${workspace.name}`} searchBarPlaceholder="Search items...">
+    <List
+      navigationTitle={`Items in ${workspace.name}`}
+      searchBarPlaceholder="Search items..."
+    >
       <List.EmptyView
         icon={Icon.Tray}
         title="No Items"
@@ -132,7 +149,11 @@ export function ManageItemsView({ workspace, onWorkspaceUpdated }: ManageItemsVi
                     <EditItemForm
                       item={item}
                       onItemUpdated={(updatedItem) => {
-                        const newItems = items.map((i) => (i.id === item.id ? { ...updatedItem, id: item.id } : i));
+                        const newItems = items.map((i) =>
+                          i.id === item.id
+                            ? { ...updatedItem, id: item.id }
+                            : i,
+                        );
                         setItems(newItems);
                         updateWorkspace(workspace.id, { items: newItems });
                         onWorkspaceUpdated();

@@ -1,5 +1,9 @@
 import { Toast, showHUD, showToast } from "@raycast/api";
-import type { TrackedWindow, WorkspaceItem, WorkspaceItemType } from "../../types/workspace";
+import type {
+  TrackedWindow,
+  WorkspaceItem,
+  WorkspaceItemType,
+} from "../../types/workspace";
 import { delay } from "../utils/delay";
 import { AppLauncher } from "./strategies/app-launcher";
 import type { ItemLaunchStrategy } from "./strategies/base-strategy";
@@ -17,7 +21,9 @@ import { UrlLauncher } from "./strategies/url-launcher";
  * You can override this value by setting the environment variable RAYCAST_APP_INIT_DELAY_MS.
  * Increase this value if your apps need more time to initialize their windows.
  */
-const APP_INIT_DELAY = process.env.RAYCAST_APP_INIT_DELAY_MS ? Number(process.env.RAYCAST_APP_INIT_DELAY_MS) : 1500;
+const APP_INIT_DELAY = process.env.RAYCAST_APP_INIT_DELAY_MS
+  ? Number(process.env.RAYCAST_APP_INIT_DELAY_MS)
+  : 1500;
 
 const appLauncher = new AppLauncher();
 
@@ -55,7 +61,9 @@ async function launchItem(item: WorkspaceItem): Promise<TrackedWindow[]> {
 }
 
 /** Verify which tracked windows still exist */
-export async function verifyAllWindows(windows: TrackedWindow[]): Promise<TrackedWindow[]> {
+export async function verifyAllWindows(
+  windows: TrackedWindow[],
+): Promise<TrackedWindow[]> {
   const windowsByType = groupBy(windows, (w) => w.type);
   const verified: TrackedWindow[] = [];
 
@@ -92,8 +100,8 @@ async function launchAppGroup(apps: WorkspaceItem[]): Promise<TrackedWindow[]> {
       appLauncher.captureBeforeState(item).catch((err) => {
         console.error(`Error capturing before-state for ${item.name}:`, err);
         return null;
-      })
-    )
+      }),
+    ),
   );
 
   // Phase 2: Launch all apps
@@ -102,8 +110,8 @@ async function launchAppGroup(apps: WorkspaceItem[]): Promise<TrackedWindow[]> {
     apps.map((item) =>
       appLauncher.launchOnly(item).catch((err) => {
         console.error(`Error launching ${item.name}:`, err);
-      })
-    )
+      }),
+    ),
   );
 
   // Phase 3: Wait for initialization, then capture after-state
@@ -118,14 +126,16 @@ async function launchAppGroup(apps: WorkspaceItem[]): Promise<TrackedWindow[]> {
         console.error("Error capturing after-state:", err);
         return [];
       });
-    })
+    }),
   );
 
   return windowArrays.flat();
 }
 
 /** Launch non-app items (files, URLs, terminals) in parallel */
-async function launchOtherItems(items: WorkspaceItem[]): Promise<{ windows: TrackedWindow[]; errors: string[] }> {
+async function launchOtherItems(
+  items: WorkspaceItem[],
+): Promise<{ windows: TrackedWindow[]; errors: string[] }> {
   const results = await Promise.all(
     items.map(async (item) => {
       try {
@@ -135,11 +145,15 @@ async function launchOtherItems(items: WorkspaceItem[]): Promise<{ windows: Trac
         console.error(`Error launching ${item.name}:`, error);
         return { success: false as const, error: errorMsg };
       }
-    })
+    }),
   );
 
-  const windows = results.filter((r) => r.success).flatMap((r) => (r as { windows: TrackedWindow[] }).windows);
-  const errors = results.filter((r) => !r.success).map((r) => (r as { error: string }).error);
+  const windows = results
+    .filter((r) => r.success)
+    .flatMap((r) => (r as { windows: TrackedWindow[] }).windows);
+  const errors = results
+    .filter((r) => !r.success)
+    .map((r) => (r as { error: string }).error);
 
   return { windows, errors };
 }
@@ -152,7 +166,10 @@ async function launchOtherItems(items: WorkspaceItem[]): Promise<{ windows: Trac
  * Launches all items in a workspace with parallel execution and window tracking.
  * Apps are launched in groups based on their delay settings.
  */
-export async function launchWorkspace(items: WorkspaceItem[], workspaceName: string): Promise<TrackedWindow[]> {
+export async function launchWorkspace(
+  items: WorkspaceItem[],
+  workspaceName: string,
+): Promise<TrackedWindow[]> {
   if (items.length === 0) {
     await showHUD("Workspace is empty");
     return [];
@@ -175,7 +192,9 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
   const appsByDelay = groupBy(appItems, (item) => item.delay || 0);
   const sortedDelays = Array.from(appsByDelay.keys()).sort((a, b) => a - b);
 
-  console.log(`Launching ${appItems.length} apps in ${sortedDelays.length} groups + ${otherItems.length} other items`);
+  console.log(
+    `Launching ${appItems.length} apps in ${sortedDelays.length} groups + ${otherItems.length} other items`,
+  );
 
   // Launch each delay group
   for (const delayMs of sortedDelays) {
@@ -187,7 +206,9 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
     const group = appsByDelay.get(delayMs) || [];
     if (group.length === 0) continue;
 
-    console.log(`\n=== Launching ${group.length} apps (delay: ${delayMs}ms) ===`);
+    console.log(
+      `\n=== Launching ${group.length} apps (delay: ${delayMs}ms) ===`,
+    );
 
     try {
       const windows = await launchAppGroup(group);
@@ -230,7 +251,10 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
 // ============================================================================
 
 /** Closes all tracked windows from a workspace */
-export async function closeWorkspace(windows: TrackedWindow[], workspaceName: string): Promise<void> {
+export async function closeWorkspace(
+  windows: TrackedWindow[],
+  workspaceName: string,
+): Promise<void> {
   if (windows.length === 0) {
     await showHUD("No windows to close");
     return;
@@ -282,6 +306,8 @@ export async function closeWorkspace(windows: TrackedWindow[], workspaceName: st
     toast.style = Toast.Style.Failure;
     toast.title = "Workspace closed with errors";
     toast.message = `${closedCount}/${verifiedWindows.length} closed, ${errors.length} failed`;
-    await showHUD(`${closedCount}/${verifiedWindows.length} windows closed. ${errors[0]}`);
+    await showHUD(
+      `${closedCount}/${verifiedWindows.length} windows closed. ${errors[0]}`,
+    );
   }
 }

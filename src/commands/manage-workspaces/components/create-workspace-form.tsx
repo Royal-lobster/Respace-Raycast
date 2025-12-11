@@ -1,5 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { Action, ActionPanel, Form, Icon, Toast, showToast, useNavigation } from "@raycast/api";
+import {
+  Action,
+  ActionPanel,
+  Form,
+  Icon,
+  Toast,
+  showToast,
+  useNavigation,
+} from "@raycast/api";
 import { useState } from "react";
 import { createWorkspace } from "../../../core/storage/storage";
 import type { WorkspaceItem } from "../../../types/workspace";
@@ -11,7 +19,9 @@ interface CreateWorkspaceFormProps {
   onWorkspaceCreated: () => void;
 }
 
-export function CreateWorkspaceForm({ onWorkspaceCreated }: CreateWorkspaceFormProps) {
+export function CreateWorkspaceForm({
+  onWorkspaceCreated,
+}: CreateWorkspaceFormProps) {
   const { pop } = useNavigation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -66,7 +76,7 @@ export function CreateWorkspaceForm({ onWorkspaceCreated }: CreateWorkspaceFormP
       acc[iconOption.category].push(iconOption);
       return acc;
     },
-    {} as Record<string, typeof WORKSPACE_ICONS>
+    {} as Record<string, typeof WORKSPACE_ICONS>,
   );
 
   return (
@@ -74,7 +84,11 @@ export function CreateWorkspaceForm({ onWorkspaceCreated }: CreateWorkspaceFormP
       navigationTitle="Create Workspace"
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Create Workspace" icon={Icon.Check} onSubmit={handleSubmit} />
+          <Action.SubmitForm
+            title="Create Workspace"
+            icon={Icon.Check}
+            onSubmit={handleSubmit}
+          />
           <Action.Push
             title="Add Item"
             icon={Icon.Plus}
@@ -91,7 +105,13 @@ export function CreateWorkspaceForm({ onWorkspaceCreated }: CreateWorkspaceFormP
         </ActionPanel>
       }
     >
-      <Form.TextField id="name" title="Name" placeholder="My Workspace" value={name} onChange={setName} />
+      <Form.TextField
+        id="name"
+        title="Name"
+        placeholder="My Workspace"
+        value={name}
+        onChange={setName}
+      />
       <Form.Dropdown id="icon" title="Icon" value={icon} onChange={setIcon}>
         {Object.entries(iconsByCategory).map(([category, icons]) => (
           <Form.Dropdown.Section key={category} title={category}>

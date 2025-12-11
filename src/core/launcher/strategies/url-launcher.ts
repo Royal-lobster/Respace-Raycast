@@ -10,16 +10,18 @@ export class UrlLauncher implements ItemLaunchStrategy {
       // Return empty array to indicate no trackable windows
       return [];
     } catch (error) {
-      throw new Error(`Failed to launch ${item.name}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to launch ${item.name}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
-  async close(_windows: TrackedWindow[]): Promise<void> {
+  async close(): Promise<void> {
     // URLs can't be reliably closed - they're opened in browsers as tabs
     // Note: This is intentionally a no-op
   }
 
-  async verifyWindows(_windows: TrackedWindow[]): Promise<TrackedWindow[]> {
+  async verifyWindows(): Promise<TrackedWindow[]> {
     // URLs can't be tracked, so return empty array
     return [];
   }

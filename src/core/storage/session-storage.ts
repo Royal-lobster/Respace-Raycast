@@ -1,5 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import type { SessionsData, TrackedWindow, WorkspaceSession } from "../../types/workspace";
+import type {
+  SessionsData,
+  TrackedWindow,
+  WorkspaceSession,
+} from "../../types/workspace";
 import { CONFIG_DIR, SESSIONS_FILE } from "./constants";
 
 /**
@@ -47,7 +51,9 @@ export function writeSessions(data: SessionsData): void {
 /**
  * Gets an active session by workspace ID
  */
-export function getActiveSession(workspaceId: string): WorkspaceSession | undefined {
+export function getActiveSession(
+  workspaceId: string,
+): WorkspaceSession | undefined {
   const data = readSessions();
   return data.sessions.find((s) => s.workspaceId === workspaceId);
 }
@@ -62,7 +68,10 @@ export function getAllSessions(): WorkspaceSession[] {
 /**
  * Creates a new workspace session
  */
-export function createSession(workspaceId: string, windows: TrackedWindow[]): WorkspaceSession {
+export function createSession(
+  workspaceId: string,
+  windows: TrackedWindow[],
+): WorkspaceSession {
   const data = readSessions();
 
   // Remove any existing session for this workspace
@@ -83,7 +92,10 @@ export function createSession(workspaceId: string, windows: TrackedWindow[]): Wo
 /**
  * Updates an existing workspace session
  */
-export function updateSession(workspaceId: string, windows: TrackedWindow[]): WorkspaceSession | null {
+export function updateSession(
+  workspaceId: string,
+  windows: TrackedWindow[],
+): WorkspaceSession | null {
   const data = readSessions();
   const index = data.sessions.findIndex((s) => s.workspaceId === workspaceId);
 
