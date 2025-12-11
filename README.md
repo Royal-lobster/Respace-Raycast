@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/extension.png" width="200" alt="Respace Logo">
+<img src="assets/extension.png" width="100" alt="Respace Logo">
 
 # Respace - Workspace Manager for Raycast
 
