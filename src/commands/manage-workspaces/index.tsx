@@ -1,6 +1,6 @@
 import { Action, ActionPanel, Alert, Color, Icon, List, Toast, confirmAlert, showToast } from "@raycast/api";
 import { useEffect, useState } from "react";
-import { deleteWorkspace, getAllWorkspaces } from "../../core/storage/storage";
+import { deleteWorkspace, duplicateWorkspace, getAllWorkspaces } from "../../core/storage/storage";
 import type { Workspace, WorkspaceItemType } from "../../types/workspace";
 import { CreateWorkspaceForm } from "./components/create-workspace-form";
 import { EditWorkspaceForm } from "./components/edit-workspace-form";
@@ -53,6 +53,32 @@ export default function ManageWorkspaces() {
           message: error instanceof Error ? error.message : String(error),
         });
       }
+    }
+  }
+
+  async function handleDuplicate(workspace: Workspace) {
+    try {
+      const duplicated = duplicateWorkspace(workspace.id);
+      if (duplicated) {
+        await showToast({
+          style: Toast.Style.Success,
+          title: "Workspace duplicated",
+          message: duplicated.name,
+        });
+        loadWorkspaces();
+      } else {
+        await showToast({
+          style: Toast.Style.Failure,
+          title: "Failed to duplicate workspace",
+          message: "Workspace not found",
+        });
+      }
+    } catch (error) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Failed to duplicate workspace",
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -169,6 +195,12 @@ export default function ManageWorkspaces() {
                     target={<CreateWorkspaceForm onWorkspaceCreated={loadWorkspaces} />}
                     shortcut={{ modifiers: ["cmd"], key: "n" }}
                   />
+                  <Action
+                    title="Duplicate Workspace"
+                    icon={Icon.CopyClipboard}
+                    onAction={() => handleDuplicate(workspace)}
+                    shortcut={{ modifiers: ["cmd", "shift"], key: "d" }}
+                  />
                 </ActionPanel.Section>
                 <ActionPanel.Section>
                   <Action
@@ -176,7 +208,7 @@ export default function ManageWorkspaces() {
                     icon={Icon.Trash}
                     style={Action.Style.Destructive}
                     onAction={() => handleDelete(workspace)}
-                    shortcut={{ modifiers: ["cmd"], key: "d" }}
+                    shortcut={{ modifiers: ["ctrl"], key: "x" }}
                   />
                 </ActionPanel.Section>
               </ActionPanel>

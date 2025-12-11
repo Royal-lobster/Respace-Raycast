@@ -118,3 +118,27 @@ export function deleteWorkspace(id: string): boolean {
 
   return true;
 }
+
+/**
+ * Duplicates an existing workspace with a new name
+ */
+export function duplicateWorkspace(id: string): Workspace | null {
+  const workspace = getWorkspaceById(id);
+
+  if (!workspace) {
+    return null;
+  }
+
+  // Create new items with fresh IDs
+  const duplicatedItems = workspace.items.map((item) => ({
+    ...item,
+    id: `item-${randomUUID()}`,
+  }));
+
+  return createWorkspace({
+    name: `${workspace.name} (Copy)`,
+    description: workspace.description,
+    icon: workspace.icon,
+    items: duplicatedItems,
+  });
+}
