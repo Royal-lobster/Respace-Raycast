@@ -265,6 +265,14 @@ pnpm format
 pnpm check
 ```
 
+### Window Tracking (Brief)
+
+- Hybrid tracking picks window-level for AppleScript-aware apps and app-level when window IDs cannot be read (common for Electron/Chromium apps).
+- Launch workflow: detect running state and window IDs before launch, launch, wait ~1.5s, capture after-launch IDs, and track new windows accordingly.
+- Closing: window-level items close specific windows; app-level items quit the whole app. Already running apps are intentionally not tracked.
+- Compatibility: native macOS apps (Finder, Calendar, Safari, Terminal, TextEdit, etc.) support window-level; most Electron/Chromium apps (VS Code, Slack, Discord, Spotify, Chrome-family) fall back to app-level.
+- Limitations: depends on Accessibility permissions; window IDs can change; app-level tracking closes all windows of that app.
+
 ### Storage Format
 
 Workspaces are stored in `~/.config/respace-raycast/workspaces.json`:
