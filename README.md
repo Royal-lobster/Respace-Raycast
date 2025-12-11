@@ -2,7 +2,7 @@
 
 <img src="assets/extension.png" width="100" alt="Respace Logo">
 
-# 🚀 Respace - Workspace Manager for Raycast
+# Respace - Workspace Manager for Raycast
 
 
 A powerful Raycast extension to open apps, files, folders, URLs, and terminal commands in organized workspace bundles with a single click.
