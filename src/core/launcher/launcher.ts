@@ -120,6 +120,8 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
     await showHUD(`⚠️ ${successCount}/${items.length} items opened. ${errors[0]}`);
   }
 
+  console.log(`Collected ${allTrackedWindows.length} tracked windows`);
+
   return allTrackedWindows;
 }
 

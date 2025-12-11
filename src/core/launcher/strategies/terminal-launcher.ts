@@ -70,6 +70,7 @@ export class TerminalLauncher implements ItemLaunchStrategy {
         appName: "Terminal",
         windowTitle: item.name,
         type: item.type,
+        trackingMode: "window" as const,
         launchedAt: Date.now(),
       }));
     } catch (error) {

@@ -23,15 +23,23 @@ export interface WorkspacesData {
 }
 
 /**
+ * Tracking mode for windows/apps
+ * - "window": Track individual window by ID (for AppleScript-aware apps)
+ * - "app": Track entire app (for non-scriptable apps like Electron)
+ */
+export type TrackingMode = "window" | "app";
+
+/**
  * Represents a tracked window opened by a workspace item
  */
 export interface TrackedWindow {
   id: string; // Our generated UUID
-  systemWindowId: number; // macOS System Events window ID
+  systemWindowId: number; // macOS System Events window ID (or 0 for app-level tracking)
   itemId: string; // Reference to WorkspaceItem.id
   appName: string; // Process name for System Events
   windowTitle?: string; // For verification/debugging
   type: WorkspaceItemType;
+  trackingMode: TrackingMode; // How this item is being tracked
   launchedAt: number; // Timestamp
 }
 

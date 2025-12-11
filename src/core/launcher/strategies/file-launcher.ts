@@ -49,6 +49,7 @@ export class FileLauncher implements ItemLaunchStrategy {
         appName: "Finder",
         windowTitle: item.name,
         type: item.type,
+        trackingMode: "window" as const,
         launchedAt: Date.now(),
       }));
     } catch (error) {
