@@ -6,18 +6,31 @@ import type { ItemLaunchStrategy, BeforeLaunchState } from "./base-strategy";
 
 const execAsync = promisify(exec);
 
-/**
- * Helper to delay execution
- */
+// ============================================================================
+// Constants
+// ============================================================================
+
+const TIMEOUTS = {
+  WINDOW_ID_QUERY: 2000, // Max time to wait for window ID query
+  WINDOW_TITLE_QUERY: 1000, // Max time to wait for window title
+  APP_LAUNCH_POLL: 1500, // Max time to poll for app launch
+  APP_LAUNCH_POLL_INTERVAL: 100, // Poll interval when waiting for app
+  WINDOW_CREATION_DELAY: 300, // Extra delay after app detected for window creation
+} as const;
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * Execute a command with a timeout
- * Returns empty string if timeout or error occurs
+ * Executes a shell command with a timeout.
+ * Returns empty string on timeout or error (fail-safe for AppleScript queries).
  */
-async function execWithTimeout(command: string, timeoutMs = 3000): Promise<string> {
+function execWithTimeout(command: string, timeoutMs: number): Promise<string> {
   return new Promise((resolve) => {
     let resolved = false;
     let childProcess: ChildProcess | null = null;
@@ -25,9 +38,7 @@ async function execWithTimeout(command: string, timeoutMs = 3000): Promise<strin
     const timer = setTimeout(() => {
       if (!resolved) {
         resolved = true;
-        if (childProcess) {
-          childProcess.kill("SIGKILL");
-        }
+        childProcess?.kill("SIGKILL");
         resolve("");
       }
     }, timeoutMs);
@@ -36,109 +47,89 @@ async function execWithTimeout(command: string, timeoutMs = 3000): Promise<strin
       if (!resolved) {
         resolved = true;
         clearTimeout(timer);
-        if (error) {
-          resolve("");
-        } else {
-          resolve(stdout);
-        }
+        resolve(error ? "" : stdout);
       }
     });
   });
 }
 
-export class AppLauncher implements ItemLaunchStrategy {
-  /**
-   * Checks if an app is currently running using pgrep (fast, no AppleScript)
-   */
-  private async isAppRunning(appName: string): Promise<boolean> {
-    try {
-      // Use pgrep which is much faster than AppleScript
-      const { stdout } = await execAsync(`pgrep -x "${appName}" 2>/dev/null || true`);
-      return stdout.trim().length > 0;
-    } catch {
-      return false;
-    }
-  }
+/**
+ * Escapes single quotes for shell command embedding.
+ */
+function escapeForShell(str: string): string {
+  return str.replace(/'/g, "'\\''");
+}
 
-  /**
-   * Gets window IDs by talking directly to the application (for AppleScript-aware apps)
-   * Uses timeout to prevent hanging on unresponsive apps
-   */
-  private async getWindowIdsViaDirectApp(appName: string): Promise<number[]> {
-    const script = `tell application "${appName}"
+/**
+ * Runs an AppleScript with timeout protection.
+ */
+function runAppleScript(script: string, timeoutMs: number): Promise<string> {
+  return execWithTimeout(`osascript -e '${escapeForShell(script)}'`, timeoutMs);
+}
+
+// ============================================================================
+// AppleScript Builders
+// ============================================================================
+
+const AppleScripts = {
+  /** Get all window IDs for an app */
+  getWindowIds: (appName: string) => `tell application "${appName}"
   if (count of windows) > 0 then
     get id of every window
   else
     return ""
   end if
-end tell`;
+end tell`,
 
-    const stdout = await execWithTimeout(`osascript -e '${script.replace(/'/g, "'\\''")}'`, 2000);
-    const trimmed = stdout.trim();
-
-    if (!trimmed || trimmed === "") {
-      return [];
-    }
-
-    // Parse comma-separated IDs
-    const ids = trimmed
-      .split(",")
-      .map((s) => Number.parseInt(s.trim(), 10))
-      .filter((id) => !Number.isNaN(id));
-    return ids;
-  }
-
-  /**
-   * Gets window IDs for a specific app
-   * Only tries direct app query (faster, and System Events rarely works for window IDs)
-   */
-  private async getWindowIds(appName: string): Promise<number[]> {
-    // Only try direct app query - System Events is slow and rarely provides window IDs
-    const windowIds = await this.getWindowIdsViaDirectApp(appName);
-    if (windowIds.length > 0) {
-      console.log(`  Found ${windowIds.length} windows for ${appName}`);
-    }
-    return windowIds;
-  }
-
-  /**
-   * Gets window title for a specific window ID
-   * Uses timeout to prevent hanging
-   */
-  private async getWindowTitle(appName: string, windowId: number): Promise<string | undefined> {
-    const script = `tell application "${appName}"
+  /** Get title of a specific window by ID */
+  getWindowTitle: (appName: string, windowId: number) => `tell application "${appName}"
   repeat with w in windows
     if id of w is ${windowId} then
       return name of w
     end if
   end repeat
-end tell`;
+end tell`,
 
-    const stdout = await execWithTimeout(`osascript -e '${script.replace(/'/g, "'\\''")}'`, 1000);
-    const title = stdout.trim();
-    return title || undefined;
-  }
+  /** Quit an application gracefully */
+  quitApp: (appName: string) => `tell application "${appName}" to quit`,
 
-  /**
-   * Wait for app to launch using fast pgrep polling
-   */
-  private async waitForAppToLaunch(appName: string, maxWaitMs = 1500): Promise<void> {
-    const pollInterval = 100;
-    const maxAttempts = Math.ceil(maxWaitMs / pollInterval);
+  /** Close a specific window using System Events (UI scripting) */
+  closeWindowViaSystemEvents: (appName: string, windowId: number) => `tell application "System Events"
+  if exists process "${appName}" then
+    tell process "${appName}"
+      set windowList to every window
+      repeat with w in windowList
+        if id of w is ${windowId} then
+          click button 1 of w
+          return
+        end if
+      end repeat
+    end tell
+  end if
+end tell`,
 
-    for (let i = 0; i < maxAttempts; i++) {
-      if (await this.isAppRunning(appName)) {
-        // App is running, give it a bit more time to create windows
-        await delay(300);
-        return;
-      }
-      await delay(pollInterval);
-    }
-  }
+  /** Close a specific window via direct app command */
+  closeWindowViaApp: (appName: string, windowId: number) => `tell application "${appName}"
+  set windowList to every window
+  repeat with w in windowList
+    if id of w is ${windowId} then
+      close w
+      return
+    end if
+  end repeat
+end tell`,
+};
 
-  /**
-   * Extract app name from path
-   */
+// ============================================================================
+// AppLauncher Class
+// ============================================================================
+
+export class AppLauncher implements ItemLaunchStrategy {
+  // --------------------------------------------------------------------------
+  // Private Helpers
+  // --------------------------------------------------------------------------
+
+  /** Extract app name from full path (e.g., "/Applications/Slack.app" → "Slack") */
   private getAppName(item: WorkspaceItem): string {
     const appName = item.path
       .replace(/\.app$/, "")
@@ -148,6 +139,73 @@ end tell`;
       throw new Error("Could not extract app name from path");
     }
     return appName;
+  }
+
+  /** Check if app is running using pgrep (fast, no AppleScript overhead) */
+  private async isAppRunning(appName: string): Promise<boolean> {
+    try {
+      const { stdout } = await execAsync(`pgrep -x "${appName}" 2>/dev/null || true`);
+      return stdout.trim().length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Get window IDs for an app (with timeout protection) */
+  private async getWindowIds(appName: string): Promise<number[]> {
+    const stdout = await runAppleScript(AppleScripts.getWindowIds(appName), TIMEOUTS.WINDOW_ID_QUERY);
+
+    if (!stdout.trim()) return [];
+
+    const ids = stdout
+      .trim()
+      .split(",")
+      .map((s) => Number.parseInt(s.trim(), 10))
+      .filter((id) => !Number.isNaN(id));
+
+    if (ids.length > 0) {
+      console.log(`  Found ${ids.length} windows for ${appName}`);
+    }
+    return ids;
+  }
+
+  /** Get window title by ID (with timeout protection) */
+  private async getWindowTitle(appName: string, windowId: number): Promise<string | undefined> {
+    const stdout = await runAppleScript(AppleScripts.getWindowTitle(appName, windowId), TIMEOUTS.WINDOW_TITLE_QUERY);
+    return stdout.trim() || undefined;
+  }
+
+  /** Poll until app is running or timeout */
+  private async waitForAppToLaunch(appName: string): Promise<void> {
+    const maxAttempts = Math.ceil(TIMEOUTS.APP_LAUNCH_POLL / TIMEOUTS.APP_LAUNCH_POLL_INTERVAL);
+
+    for (let i = 0; i < maxAttempts; i++) {
+      if (await this.isAppRunning(appName)) {
+        await delay(TIMEOUTS.WINDOW_CREATION_DELAY);
+        return;
+      }
+      await delay(TIMEOUTS.APP_LAUNCH_POLL_INTERVAL);
+    }
+  }
+
+  /** Create a TrackedWindow object */
+  private createTrackedWindow(
+    item: WorkspaceItem,
+    appName: string,
+    trackingMode: TrackingMode,
+    systemWindowId: number,
+    windowTitle?: string
+  ): TrackedWindow {
+    return {
+      id: randomUUID(),
+      systemWindowId,
+      itemId: item.id,
+      appName,
+      windowTitle: windowTitle ?? appName,
+      type: item.type,
+      trackingMode,
+      launchedAt: Date.now(),
+    };
   }
 
   /**
@@ -177,60 +235,33 @@ end tell`;
 
     // Wait for app to be ready
     if (!wasRunning) {
-      await this.waitForAppToLaunch(appName, 1500);
+      await this.waitForAppToLaunch(appName);
     } else {
-      await delay(300);
+      await delay(TIMEOUTS.WINDOW_CREATION_DELAY);
     }
 
     // Get windows after launch
     const afterIds = await this.getWindowIds(appName);
-    console.log(`[${appName}] After: windows=${afterIds.join(",") || "none"}`);
-
-    // Find new windows
     const newWindowIds = afterIds.filter((id) => !windowIdsBefore.includes(id));
+    console.log(`[${appName}] After: windows=${afterIds.join(",") || "none"}, new=${newWindowIds.length}`);
 
-    let trackingMode: TrackingMode = "window";
-    let tracked: TrackedWindow[] = [];
-
+    // Determine tracking mode based on what we found
     if (newWindowIds.length > 0) {
-      console.log(`[${appName}] WINDOW-LEVEL tracking: ${newWindowIds.length} new windows`);
-      trackingMode = "window";
-
-      // Get titles in parallel
-      const titlePromises = newWindowIds.map((id) => this.getWindowTitle(appName, id));
-      const titles = await Promise.all(titlePromises);
-
-      tracked = newWindowIds.map((windowId, index) => ({
-        id: randomUUID(),
-        systemWindowId: windowId,
-        itemId: item.id,
-        appName,
-        windowTitle: titles[index],
-        type: item.type,
-        trackingMode,
-        launchedAt: Date.now(),
-      }));
-    } else if (!wasRunning) {
-      console.log(`[${appName}] APP-LEVEL tracking (no window IDs)`);
-      trackingMode = "app";
-
-      tracked = [
-        {
-          id: randomUUID(),
-          systemWindowId: 0,
-          itemId: item.id,
-          appName,
-          windowTitle: appName,
-          type: item.type,
-          trackingMode,
-          launchedAt: Date.now(),
-        },
-      ];
-    } else {
-      console.log(`[${appName}] Already running - skipping tracking`);
+      // Window-level tracking: we can track individual windows
+      console.log(`[${appName}] Using WINDOW-LEVEL tracking`);
+      const titles = await Promise.all(newWindowIds.map((id) => this.getWindowTitle(appName, id)));
+      return newWindowIds.map((windowId, i) => this.createTrackedWindow(item, appName, "window", windowId, titles[i]));
     }
 
-    return tracked;
+    if (!wasRunning) {
+      // App-level tracking: app wasn't running before, track the whole app
+      console.log(`[${appName}] Using APP-LEVEL tracking`);
+      return [this.createTrackedWindow(item, appName, "app", 0)];
+    }
+
+    // App was already running and we can't identify new windows
+    console.log(`[${appName}] Already running - skipping tracking`);
+    return [];
   }
 
   /**
@@ -251,100 +282,64 @@ end tell`;
     for (const window of windows) {
       try {
         if (window.trackingMode === "app") {
-          // App-level tracking: Quit the entire application
-          console.log(`Quitting ${window.appName} (app-level tracking)`);
-          const quitScript = `tell application "${window.appName}" to quit`;
-          try {
-            await execAsync(`osascript -e '${quitScript.replace(/'/g, "'\\''")}'`);
-          } catch {
-            // Try force quit if graceful quit fails
-            await execAsync(`killall "${window.appName}"`).catch(() => {
-              // Silently ignore if process doesn't exist
-            });
-          }
+          await this.closeApp(window.appName);
         } else {
-          // Window-level tracking: Close specific window by ID
-          console.log(`Closing window ${window.systemWindowId} of ${window.appName}`);
-
-          // Method 1: Try System Events (UI scripting to click close button)
-          const systemEventsScript = `tell application "System Events"
-  if exists process "${window.appName}" then
-    tell process "${window.appName}"
-      set windowList to every window
-      repeat with w in windowList
-        if id of w is ${window.systemWindowId} then
-          click button 1 of w
-          return
-        end if
-      end repeat
-    end tell
-  end if
-end tell`;
-
-          try {
-            await execAsync(`osascript -e '${systemEventsScript.replace(/'/g, "'\\''")}'`);
-            continue;
-          } catch {
-            // System Events failed, try direct app close
-          }
-
-          // Method 2: Try direct app close command
-          const directAppScript = `tell application "${window.appName}"
-  set windowList to every window
-  repeat with w in windowList
-    if id of w is ${window.systemWindowId} then
-      close w
-      return
-    end if
-  end repeat
-end tell`;
-
-          await execAsync(`osascript -e '${directAppScript.replace(/'/g, "'\\''")}'`);
+          await this.closeWindow(window.appName, window.systemWindowId);
         }
       } catch (error) {
-        console.error(`Failed to close ${window.trackingMode === "app" ? "app" : "window"} ${window.appName}:`, error);
+        const target = window.trackingMode === "app" ? "app" : "window";
+        console.error(`Failed to close ${target} ${window.appName}:`, error);
       }
     }
   }
 
-  async verifyWindows(windows: TrackedWindow[]): Promise<TrackedWindow[]> {
-    const verified: TrackedWindow[] = [];
-
-    const windowsByApp = new Map<string, TrackedWindow[]>();
-    for (const window of windows) {
-      const appWindows = windowsByApp.get(window.appName) || [];
-      appWindows.push(window);
-      windowsByApp.set(window.appName, appWindows);
+  /** Quit an entire application */
+  private async closeApp(appName: string): Promise<void> {
+    console.log(`Quitting ${appName} (app-level)`);
+    try {
+      await runAppleScript(AppleScripts.quitApp(appName), 2000);
+    } catch {
+      // Fallback: force quit if graceful quit fails
+      await execAsync(`killall "${appName}"`).catch(() => {});
     }
+  }
+
+  /** Close a specific window by ID */
+  private async closeWindow(appName: string, windowId: number): Promise<void> {
+    console.log(`Closing window ${windowId} of ${appName}`);
+
+    // Try System Events first (UI scripting)
+    try {
+      await runAppleScript(AppleScripts.closeWindowViaSystemEvents(appName, windowId), 2000);
+      return;
+    } catch {
+      // Fall through to direct app method
+    }
+
+    // Fallback: direct app close command
+    await runAppleScript(AppleScripts.closeWindowViaApp(appName, windowId), 2000);
+  }
+
+  async verifyWindows(windows: TrackedWindow[]): Promise<TrackedWindow[]> {
+    // Group windows by app for efficient batch verification
+    const windowsByApp = this.groupByApp(windows);
+    const verified: TrackedWindow[] = [];
 
     for (const [appName, appWindows] of windowsByApp) {
       try {
-        // Check if app is still running
         const isRunning = await this.isAppRunning(appName);
+        if (!isRunning) continue;
 
-        if (!isRunning) {
-          // App not running, none of its windows are valid
-          continue;
-        }
+        // App-level: valid if app is running
+        const appLevel = appWindows.filter((w) => w.trackingMode === "app");
+        verified.push(...appLevel);
 
-        // Separate app-level and window-level tracked items
-        const appLevelTracked = appWindows.filter((w) => w.trackingMode === "app");
-        const windowLevelTracked = appWindows.filter((w) => w.trackingMode === "window");
-
-        // App-level tracking: Just verify app is running
-        if (appLevelTracked.length > 0) {
-          verified.push(...appLevelTracked);
-        }
-
-        // Window-level tracking: Verify specific windows exist
-        if (windowLevelTracked.length > 0) {
+        // Window-level: valid if specific window ID still exists
+        const windowLevel = appWindows.filter((w) => w.trackingMode === "window");
+        if (windowLevel.length > 0) {
           const currentIds = await this.getWindowIds(appName);
-
-          for (const window of windowLevelTracked) {
-            if (currentIds.includes(window.systemWindowId)) {
-              verified.push(window);
-            }
-          }
+          const stillExists = windowLevel.filter((w) => currentIds.includes(w.systemWindowId));
+          verified.push(...stillExists);
         }
       } catch (error) {
         console.error(`Error verifying windows for ${appName}:`, error);
@@ -352,5 +347,16 @@ end tell`;
     }
 
     return verified;
+  }
+
+  /** Group windows by app name */
+  private groupByApp(windows: TrackedWindow[]): Map<string, TrackedWindow[]> {
+    const map = new Map<string, TrackedWindow[]>();
+    for (const window of windows) {
+      const group = map.get(window.appName) || [];
+      group.push(window);
+      map.set(window.appName, group);
+    }
+    return map;
   }
 }
