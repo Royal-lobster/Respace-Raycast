@@ -1,5 +1,6 @@
 import { Toast, showHUD, showToast } from "@raycast/api";
 import type { TrackedWindow, WorkspaceItem, WorkspaceItemType } from "../../types/workspace";
+import { delay } from "../utils/delay";
 import { AppLauncher } from "./strategies/app-launcher";
 import type { ItemLaunchStrategy } from "./strategies/base-strategy";
 import { FileLauncher } from "./strategies/file-launcher";
@@ -10,7 +11,13 @@ import { UrlLauncher } from "./strategies/url-launcher";
 // Constants & Setup
 // ============================================================================
 
-const APP_INIT_DELAY = 1500; // Time to wait for apps to create windows after launch
+/**
+ * Time to wait for apps to create windows after launch (in milliseconds).
+ * Default is 1500ms, which works well for most desktop apps on modern hardware.
+ * You can override this value by setting the environment variable RAYCAST_APP_INIT_DELAY_MS.
+ * Increase this value if your apps need more time to initialize their windows.
+ */
+const APP_INIT_DELAY = process.env.RAYCAST_APP_INIT_DELAY_MS ? Number(process.env.RAYCAST_APP_INIT_DELAY_MS) : 1500;
 
 const appLauncher = new AppLauncher();
 
@@ -25,10 +32,6 @@ const strategies = new Map<WorkspaceItemType, ItemLaunchStrategy>([
 // ============================================================================
 // Utility Functions
 // ============================================================================
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /** Group items by a key function */
 function groupBy<T, K>(items: T[], keyFn: (item: T) => K): Map<K, T[]> {

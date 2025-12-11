@@ -1,17 +1,11 @@
-import { randomUUID } from "node:crypto";
 import { exec } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import type { TrackedWindow, WorkspaceItem } from "../../../types/workspace";
+import { delay } from "../../utils/delay";
 import type { ItemLaunchStrategy } from "./base-strategy";
 
 const execAsync = promisify(exec);
-
-/**
- * Helper to delay execution
- */
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export class TerminalLauncher implements ItemLaunchStrategy {
   /**
@@ -54,7 +48,7 @@ export class TerminalLauncher implements ItemLaunchStrategy {
       const escapedScript = script.replace(/'/g, "'\\''");
       await execAsync(`osascript -e '${escapedScript}' '${item.path.replace(/'/g, "'\\''")}'`);
 
-      // Wait for Terminal window to appear
+      // Wait 500ms for Terminal window to appear (allows time for window creation and registration)
       await delay(500);
 
       // Get Terminal windows after launching
@@ -80,6 +74,9 @@ export class TerminalLauncher implements ItemLaunchStrategy {
 
   async close(windows: TrackedWindow[]): Promise<void> {
     for (const window of windows) {
+      if (typeof window.systemWindowId !== "number" || !Number.isFinite(window.systemWindowId)) {
+        continue;
+      }
       try {
         // Close the specific Terminal window
         const script = `

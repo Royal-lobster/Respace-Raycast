@@ -12,7 +12,9 @@ export default function OpenWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    loadData().catch((error) => {
+      console.error("Unhandled error in loadData:", error);
+    });
   }, []);
 
   async function loadData() {
