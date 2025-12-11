@@ -1,6 +1,7 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api";
 import { getWorkspaceDeeplink } from "../../../core/deeplink/deeplink";
 import type { Workspace } from "../../../types/workspace";
+import { getWorkspaceIcon } from "../../manage-workspaces/constants/workspace-icons";
 
 interface WorkspaceListItemProps {
   workspace: Workspace;
@@ -22,7 +23,7 @@ export function WorkspaceListItem({ workspace, onOpen, onClose, isOpened = false
   return (
     <List.Item
       key={isOpened ? `${workspace.id}-opened` : workspace.id}
-      icon={workspace.icon || Icon.Folder}
+      icon={{ source: getWorkspaceIcon(workspace.icon) }}
       title={workspace.name}
       subtitle={workspace.description}
       accessories={[{ text: itemLabel, icon: Icon.Document }]}

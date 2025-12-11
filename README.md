@@ -2,13 +2,14 @@
 
 <img src="assets/extension.png" width="100" alt="Respace Logo">
 
-# Respace - Workspace Manager for Raycast
+# 🚀 Respace - Workspace Manager for Raycast
 
-</div>
 
 A powerful Raycast extension to open apps, files, folders, URLs, and terminal commands in organized workspace bundles with a single click.
+</div>
 
-## Features
+
+## ✨ Features
 
 - 📦 **Workspace Bundles**: Group apps, folders, files, URLs, and terminal commands together
 - 🚀 **One-Click Launch**: Open entire workspaces instantly
@@ -20,21 +21,21 @@ A powerful Raycast extension to open apps, files, folders, URLs, and terminal co
 - 🎨 **Beautiful UI**: Native Raycast UI with icons and error handling
 - 🔗 **Deeplinks**: Share direct links to your workspaces
 
-## Commands
+## 🧭 Commands
 
-### Open Workspace
+### 🗂️ Open Workspace
 
 List and launch your workspaces. Simply search for a workspace and press Enter to open all its items.
 
-### Quick Open
+### ⚡ Quick Open
 
 CLI-style quick launcher for instant access to any item across all your workspaces. Type to search and press Enter to open individual items without launching the entire workspace.
 
-### Manage Workspaces
+### 🛠️ Manage Workspaces
 
 Create, edit, and delete workspaces with a full management interface.
 
-## Installation
+## 📦 Installation
 
 1. Clone this repository
 2. Install dependencies: `pnpm install`
@@ -43,9 +44,9 @@ Create, edit, and delete workspaces with a full management interface.
 
 **Note**: This extension uses `pnpm` as the package manager. The `ray lint` command may show warnings about missing `package-lock.json`, which is expected since we use `pnpm-lock.yaml` instead. The extension builds and works correctly.
 
-## Usage
+## 🎮 Usage
 
-### Creating a Workspace
+### 🆕 Creating a Workspace
 
 1. Open "Manage Workspaces" command
 2. Press `Cmd+N` to create a new workspace
@@ -58,19 +59,19 @@ Create, edit, and delete workspaces with a full management interface.
 4. Set optional launch delays for each item
 5. Save your workspace
 
-### Launching a Workspace
+### ▶️ Launching a Workspace
 
 1. Open "Open Workspace" command
 2. Search for your workspace
 3. Press Enter to launch all items
 
-### Quick Opening Individual Items
+### 🎯 Quick Opening Individual Items
 
 1. Open "Quick Open" command
 2. Type to search across all workspace items
 3. Press Enter to open just that item (without launching the entire workspace)
 
-## Example Workspace
+## 🧪 Example Workspace
 
 **Web Development Environment**
 
@@ -80,7 +81,7 @@ Create, edit, and delete workspaces with a full management interface.
 - Project folder (folder) - 2s delay
 - Terminal: `cd ~/project && npm start` - 3s delay
 
-## Development
+## 🧑‍💻 Development
 
 ```bash
 # Install dependencies
@@ -99,21 +100,21 @@ pnpm format
 pnpm check
 ```
 
-## Technology Stack
+## 🧰 Technology Stack
 
 - **TypeScript**: Type-safe development
 - **Raycast API**: Native Raycast integration
 - **Biome**: Fast code formatter and linter
 - **pnpm**: Efficient package management
 
-## Storage
+## 💾 Storage
 
 Workspaces are stored as JSON in `~/.config/respace-raycast/workspaces.json`
 
-## License
+## 📄 License
 
 MIT
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please read [AGENT.md](AGENT.md) for technical documentation.
