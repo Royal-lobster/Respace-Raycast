@@ -1,7 +1,12 @@
 import { Icon, List } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { closeWorkspace, launchWorkspace, verifyAllWindows } from "../../core/launcher/launcher";
-import { createSession, deleteSession, getAllSessions, setSessions } from "../../core/storage/session-storage";
+import {
+  createSession,
+  deleteSession,
+  getAllSessions,
+  setSessions as persistSessions,
+} from "../../core/storage/session-storage";
 import { getAllWorkspaces } from "../../core/storage/storage";
 import type { Workspace, WorkspaceSession } from "../../types/workspace";
 import { WorkspaceListItem } from "./components/workspace-list-item";
@@ -55,7 +60,7 @@ export default function OpenWorkspace() {
       }
 
       // Set all sessions at once (single file write)
-      setSessions(verifiedSessions);
+      persistSessions(verifiedSessions);
       setSessions(verifiedSessions);
     } catch (error) {
       console.error("Error loading data:", error);
