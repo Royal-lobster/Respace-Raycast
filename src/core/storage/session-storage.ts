@@ -121,6 +121,14 @@ export function deleteSession(workspaceId: string): boolean {
 }
 
 /**
+ * Batch update multiple sessions at once (more efficient than individual updates)
+ * Replaces all sessions with the provided array
+ */
+export function batchUpdateSessions(sessions: WorkspaceSession[]): void {
+  writeSessions({ sessions });
+}
+
+/**
  * Checks if a workspace has an active session
  */
 export function hasActiveSession(workspaceId: string): boolean {

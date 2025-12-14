@@ -57,21 +57,23 @@ async function launchItem(item: WorkspaceItem): Promise<TrackedWindow[]> {
 /** Verify which tracked windows still exist */
 export async function verifyAllWindows(windows: TrackedWindow[]): Promise<TrackedWindow[]> {
   const windowsByType = groupBy(windows, (w) => w.type);
-  const verified: TrackedWindow[] = [];
 
-  for (const [type, typeWindows] of windowsByType) {
-    const strategy = strategies.get(type);
-    if (!strategy) continue;
+  // Verify all types in parallel
+  const verificationResults = await Promise.all(
+    Array.from(windowsByType.entries()).map(async ([type, typeWindows]) => {
+      const strategy = strategies.get(type);
+      if (!strategy) return [];
 
-    try {
-      const stillExist = await strategy.verifyWindows(typeWindows);
-      verified.push(...stillExist);
-    } catch (error) {
-      console.error(`Error verifying windows for type ${type}:`, error);
-    }
-  }
+      try {
+        return await strategy.verifyWindows(typeWindows);
+      } catch (error) {
+        console.error(`Error verifying windows for type ${type}:`, error);
+        return [];
+      }
+    })
+  );
 
-  return verified;
+  return verificationResults.flat();
 }
 
 // ============================================================================
@@ -114,7 +116,8 @@ async function launchAppGroup(apps: WorkspaceItem[]): Promise<TrackedWindow[]> {
   const windowArrays = await Promise.all(
     beforeStates.map((state) => {
       if (!state) return Promise.resolve([]);
-      return appLauncher.captureAfterState(state).catch((err) => {
+      // Pass skipPolling=true since we already waited the global APP_INIT_DELAY
+      return appLauncher.captureAfterState(state, true).catch((err) => {
         console.error("Error capturing after-state:", err);
         return [];
       });
@@ -177,7 +180,16 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
 
   console.log(`Launching ${appItems.length} apps in ${sortedDelays.length} groups + ${otherItems.length} other items`);
 
-  // Launch each delay group
+  // Start launching non-app items in parallel with apps (don't await yet)
+  const otherItemsPromise =
+    otherItems.length > 0
+      ? (async () => {
+          console.log(`\n=== Launching ${otherItems.length} non-app items ===`);
+          return launchOtherItems(otherItems);
+        })()
+      : Promise.resolve({ windows: [], errors: [] });
+
+  // Launch each delay group of apps
   for (const delayMs of sortedDelays) {
     if (delayMs > 0) {
       console.log(`Waiting ${delayMs}ms...`);
@@ -199,13 +211,10 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
     }
   }
 
-  // Launch non-app items
-  if (otherItems.length > 0) {
-    console.log(`\n=== Launching ${otherItems.length} non-app items ===`);
-    const result = await launchOtherItems(otherItems);
-    trackedWindows.push(...result.windows);
-    errors.push(...result.errors);
-  }
+  // Wait for non-app items to complete
+  const otherResult = await otherItemsPromise;
+  trackedWindows.push(...otherResult.windows);
+  errors.push(...otherResult.errors);
 
   // Show result
   const successCount = items.length - errors.length;
@@ -253,24 +262,27 @@ export async function closeWorkspace(windows: TrackedWindow[], workspaceName: st
     return;
   }
 
-  // Close windows grouped by type
+  // Close windows of all types in parallel
   const windowsByType = groupBy(verifiedWindows, (w) => w.type);
-  let closedCount = 0;
   const errors: string[] = [];
 
-  for (const [type, typeWindows] of windowsByType) {
+  const closePromises = Array.from(windowsByType.entries()).map(async ([type, typeWindows]) => {
     const strategy = strategies.get(type);
-    if (!strategy) continue;
+    if (!strategy) return { type, count: 0 };
 
     try {
       await strategy.close(typeWindows);
-      closedCount += typeWindows.length;
-      toast.message = `${closedCount}/${verifiedWindows.length} windows closed`;
+      return { type, count: typeWindows.length };
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));
       console.error(`Error closing windows for type ${type}:`, error);
+      return { type, count: 0 };
     }
-  }
+  });
+
+  const results = await Promise.all(closePromises);
+  const closedCount = results.reduce((sum, r) => sum + r.count, 0);
+  toast.message = `${closedCount}/${verifiedWindows.length} windows closed`;
 
   // Show result
   if (errors.length === 0) {

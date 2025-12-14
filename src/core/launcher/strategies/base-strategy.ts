@@ -31,8 +31,10 @@ export interface ItemLaunchStrategy {
   /**
    * Captures state after launching and returns tracked windows
    * Optional - only AppLauncher implements this
+   * @param beforeState - State captured before launching
+   * @param skipPolling - If true, skip polling for app to launch (assumes global delay already occurred)
    */
-  captureAfterState?(beforeState: BeforeLaunchState): Promise<TrackedWindow[]>;
+  captureAfterState?(beforeState: BeforeLaunchState, skipPolling?: boolean): Promise<TrackedWindow[]>;
 
   /**
    * Closes specific tracked windows

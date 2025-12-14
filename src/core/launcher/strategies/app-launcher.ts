@@ -286,15 +286,19 @@ export class AppLauncher implements ItemLaunchStrategy {
 
   /**
    * Phase 3: Capture state after launching and determine tracking mode
+   * @param beforeState - State captured before launching
+   * @param skipPolling - If true, skip polling for app to launch (assumes global delay already occurred)
    */
-  async captureAfterState(beforeState: BeforeLaunchState): Promise<TrackedWindow[]> {
+  async captureAfterState(beforeState: BeforeLaunchState, skipPolling = false): Promise<TrackedWindow[]> {
     const { item, wasRunning, windowIdsBefore, appName } = beforeState;
 
-    // Wait for app to be ready
-    if (!wasRunning) {
-      await this.waitForAppToLaunch(appName);
-    } else {
-      await delay(TIMEOUTS.WINDOW_CREATION_DELAY);
+    // Only wait for app if we haven't already waited globally
+    if (!skipPolling) {
+      if (!wasRunning) {
+        await this.waitForAppToLaunch(appName);
+      } else {
+        await delay(TIMEOUTS.WINDOW_CREATION_DELAY);
+      }
     }
 
     // Get windows after launch
@@ -336,18 +340,28 @@ export class AppLauncher implements ItemLaunchStrategy {
   }
 
   async close(windows: TrackedWindow[]): Promise<void> {
-    for (const window of windows) {
-      try {
-        if (window.trackingMode === "app") {
-          await this.closeApp(window.appName);
-        } else {
-          await this.closeWindow(window.appName, window.systemWindowId);
-        }
-      } catch (error) {
-        const target = window.trackingMode === "app" ? "app" : "window";
-        console.error(`Failed to close ${target} ${window.appName}:`, error);
-      }
-    }
+    // Group by tracking mode for efficient parallel processing
+    const appLevelWindows = windows.filter((w) => w.trackingMode === "app");
+    const windowLevelWindows = windows.filter((w) => w.trackingMode === "window");
+
+    // Get unique app names for app-level closing
+    const uniqueAppNames = [...new Set(appLevelWindows.map((w) => w.appName))];
+
+    // Close all windows/apps in parallel
+    await Promise.all([
+      // Close apps (one call per unique app)
+      ...uniqueAppNames.map((appName) =>
+        this.closeApp(appName).catch((error) => {
+          console.error(`Failed to close app ${appName}:`, error);
+        })
+      ),
+      // Close individual windows in parallel
+      ...windowLevelWindows.map((window) =>
+        this.closeWindow(window.appName, window.systemWindowId).catch((error) => {
+          console.error(`Failed to close window ${window.systemWindowId} of ${window.appName}:`, error);
+        })
+      ),
+    ]);
   }
 
   /** Quit an entire application */
@@ -427,30 +441,34 @@ export class AppLauncher implements ItemLaunchStrategy {
   async verifyWindows(windows: TrackedWindow[]): Promise<TrackedWindow[]> {
     // Group windows by app for efficient batch verification
     const windowsByApp = this.groupByApp(windows);
-    const verified: TrackedWindow[] = [];
 
-    for (const [appName, appWindows] of windowsByApp) {
-      try {
-        const isRunning = await this.isAppRunning(appName);
-        if (!isRunning) continue;
+    // Verify all apps in parallel
+    const verificationResults = await Promise.all(
+      Array.from(windowsByApp.entries()).map(async ([appName, appWindows]) => {
+        try {
+          const isRunning = await this.isAppRunning(appName);
+          if (!isRunning) return [];
 
-        // App-level: valid if app is running
-        const appLevel = appWindows.filter((w) => w.trackingMode === "app");
-        verified.push(...appLevel);
+          // App-level: valid if app is running
+          const appLevel = appWindows.filter((w) => w.trackingMode === "app");
 
-        // Window-level: valid if specific window ID still exists
-        const windowLevel = appWindows.filter((w) => w.trackingMode === "window");
-        if (windowLevel.length > 0) {
-          const currentIds = await this.getWindowIds(appName);
-          const stillExists = windowLevel.filter((w) => currentIds.includes(w.systemWindowId));
-          verified.push(...stillExists);
+          // Window-level: valid if specific window ID still exists
+          const windowLevel = appWindows.filter((w) => w.trackingMode === "window");
+          if (windowLevel.length > 0) {
+            const currentIds = await this.getWindowIds(appName);
+            const stillExists = windowLevel.filter((w) => currentIds.includes(w.systemWindowId));
+            return [...appLevel, ...stillExists];
+          }
+
+          return appLevel;
+        } catch (error) {
+          console.error(`Error verifying windows for ${appName}:`, error);
+          return [];
         }
-      } catch (error) {
-        console.error(`Error verifying windows for ${appName}:`, error);
-      }
-    }
+      })
+    );
 
-    return verified;
+    return verificationResults.flat();
   }
 
   /** Group windows by app name */

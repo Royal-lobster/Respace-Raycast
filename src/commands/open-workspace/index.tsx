@@ -1,7 +1,7 @@
 import { Icon, List } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { closeWorkspace, launchWorkspace, verifyAllWindows } from "../../core/launcher/launcher";
-import { createSession, deleteSession, getAllSessions, updateSession } from "../../core/storage/session-storage";
+import { batchUpdateSessions, createSession, deleteSession, getAllSessions } from "../../core/storage/session-storage";
 import { getAllWorkspaces } from "../../core/storage/storage";
 import type { Workspace, WorkspaceSession } from "../../types/workspace";
 import { WorkspaceListItem } from "./components/workspace-list-item";
@@ -26,27 +26,36 @@ export default function OpenWorkspace() {
       // Load sessions from persistent storage
       const allSessions = getAllSessions();
 
-      // Verify sessions on load and clean up any with all windows closed
-      const verifiedSessions: WorkspaceSession[] = [];
-      for (const session of allSessions) {
-        const verifiedWindows = await verifyAllWindows(session.windows);
+      // Verify all sessions in parallel for faster loading
+      const verificationResults = await Promise.all(
+        allSessions.map(async (session) => {
+          const verifiedWindows = await verifyAllWindows(session.windows);
+          return { session, verifiedWindows };
+        })
+      );
 
+      // Process verification results and build updated sessions list
+      const verifiedSessions: WorkspaceSession[] = [];
+      const now = Date.now();
+
+      for (const { session, verifiedWindows } of verificationResults) {
         if (verifiedWindows.length > 0) {
-          // Update session with verified windows if any were removed
+          // Keep session, update windows if any were removed
           if (verifiedWindows.length < session.windows.length) {
-            const updatedSession = updateSession(session.workspaceId, verifiedWindows);
-            if (updatedSession) {
-              verifiedSessions.push(updatedSession);
-            }
+            verifiedSessions.push({
+              ...session,
+              windows: verifiedWindows,
+              lastVerified: now,
+            });
           } else {
             verifiedSessions.push(session);
           }
-        } else {
-          // All windows closed, remove session
-          deleteSession(session.workspaceId);
         }
+        // Sessions with no windows are simply not added (effectively deleted)
       }
 
+      // Batch update all sessions at once (single file write)
+      batchUpdateSessions(verifiedSessions);
       setSessions(verifiedSessions);
     } catch (error) {
       console.error("Error loading data:", error);
