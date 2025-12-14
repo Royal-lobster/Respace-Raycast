@@ -121,10 +121,10 @@ export function deleteSession(workspaceId: string): boolean {
 }
 
 /**
- * Batch update multiple sessions at once (more efficient than individual updates)
- * Replaces all sessions with the provided array
+ * Sets all sessions at once (replaces all existing sessions)
+ * More efficient than individual updates when processing multiple sessions
  */
-export function batchUpdateSessions(sessions: WorkspaceSession[]): void {
+export function setSessions(sessions: WorkspaceSession[]): void {
   writeSessions({ sessions });
 }
 

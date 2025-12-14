@@ -1,7 +1,7 @@
 import { Icon, List } from "@raycast/api";
 import { useEffect, useState } from "react";
 import { closeWorkspace, launchWorkspace, verifyAllWindows } from "../../core/launcher/launcher";
-import { batchUpdateSessions, createSession, deleteSession, getAllSessions } from "../../core/storage/session-storage";
+import { createSession, deleteSession, getAllSessions, setSessions } from "../../core/storage/session-storage";
 import { getAllWorkspaces } from "../../core/storage/storage";
 import type { Workspace, WorkspaceSession } from "../../types/workspace";
 import { WorkspaceListItem } from "./components/workspace-list-item";
@@ -54,8 +54,8 @@ export default function OpenWorkspace() {
         // Sessions with no windows are simply not added (effectively deleted)
       }
 
-      // Batch update all sessions at once (single file write)
-      batchUpdateSessions(verifiedSessions);
+      // Set all sessions at once (single file write)
+      setSessions(verifiedSessions);
       setSessions(verifiedSessions);
     } catch (error) {
       console.error("Error loading data:", error);

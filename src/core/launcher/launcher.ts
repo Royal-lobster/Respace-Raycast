@@ -183,11 +183,13 @@ export async function launchWorkspace(items: WorkspaceItem[], workspaceName: str
   // Start launching non-app items in parallel with apps (don't await yet)
   const otherItemsPromise =
     otherItems.length > 0
-      ? (async () => {
-          console.log(`\n=== Launching ${otherItems.length} non-app items ===`);
-          return launchOtherItems(otherItems);
-        })()
-      : Promise.resolve({ windows: [], errors: [] });
+      ? launchOtherItems(otherItems)
+      : Promise.resolve({ windows: [] as TrackedWindow[], errors: [] as string[] });
+
+  // Log non-app items launch if any
+  if (otherItems.length > 0) {
+    console.log(`\n=== Launching ${otherItems.length} non-app items ===`);
+  }
 
   // Launch each delay group of apps
   for (const delayMs of sortedDelays) {
