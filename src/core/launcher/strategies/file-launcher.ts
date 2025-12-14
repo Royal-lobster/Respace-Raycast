@@ -12,9 +12,7 @@ const execAsync = promisify(exec);
 export class FileLauncher implements ItemLaunchStrategy {
   private async getFinderWindowIds(): Promise<number[]> {
     try {
-      const { stdout } = await execAsync(
-        `osascript -e 'tell application "Finder" to get id of every window'`,
-      );
+      const { stdout } = await execAsync(`osascript -e 'tell application "Finder" to get id of every window'`);
       if (!stdout.trim()) return [];
 
       return stdout
@@ -53,23 +51,18 @@ export class FileLauncher implements ItemLaunchStrategy {
         launchedAt: Date.now(),
       }));
     } catch (error) {
-      throw new Error(
-        `Failed to launch ${item.name}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      throw new Error(`Failed to launch ${item.name}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async close(windows: TrackedWindow[]): Promise<void> {
     for (const window of windows) {
-      if (
-        typeof window.systemWindowId !== "number" ||
-        !Number.isFinite(window.systemWindowId)
-      ) {
+      if (typeof window.systemWindowId !== "number" || !Number.isFinite(window.systemWindowId)) {
         continue;
       }
       try {
         await execAsync(
-          `osascript -e 'tell application "Finder" to close window id ${window.systemWindowId}' 2>/dev/null || true`,
+          `osascript -e 'tell application "Finder" to close window id ${window.systemWindowId}' 2>/dev/null || true`
         );
       } catch (error) {
         // Silently ignore - window might already be closed
@@ -80,9 +73,7 @@ export class FileLauncher implements ItemLaunchStrategy {
   async verifyWindows(windows: TrackedWindow[]): Promise<TrackedWindow[]> {
     try {
       const currentIds = await this.getFinderWindowIds();
-      return windows.filter((window) =>
-        currentIds.includes(window.systemWindowId),
-      );
+      return windows.filter((window) => currentIds.includes(window.systemWindowId));
     } catch (error) {
       return [];
     }
