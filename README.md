@@ -35,6 +35,23 @@ CLI-style quick launcher for instant access to any item across all your workspac
 
 Create, edit, and delete workspaces with a full management interface.
 
+## 📸 Screenshots
+
+### 1. Creating new workspace
+<img width="2000" height="1250" alt="respace-1-create-workspace" src="https://github.com/user-attachments/assets/5b905c5c-f15a-4127-a29b-e24896fda50f" />
+<img width="2000" height="1250" alt="respace-2-add-item" src="https://github.com/user-attachments/assets/5e03ee09-f552-40fb-aab7-ecda84a327d0" />
+
+
+### 2. Opening and closing existing workspaces
+<img width="2000" height="1250" alt="respace-4-open-workspaces" src="https://github.com/user-attachments/assets/b7537691-8212-473c-b8be-74cbd2a00b3e" />
+<img width="2000" height="1250" alt="respace-5-quick-open" src="https://github.com/user-attachments/assets/d37b66c5-3f63-4e4f-af66-dd3e2e9d52e7" />
+
+
+### 3. Managing workspaces 
+<img width="2000" height="1250" alt="respace-3-manage-workspaces" src="https://github.com/user-attachments/assets/eb74c52d-59a2-4984-925d-f93bd65893bb" />
+<img width="1984" height="1240" alt="CleanShot 2025-12-11 at 17 16 01@2x" src="https://github.com/user-attachments/assets/c933a667-78c0-4499-a643-602dc8e3ba55" />
+
+
 ## 📦 Installation
 
 1. Clone this repository
